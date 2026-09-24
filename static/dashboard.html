@@ -615,7 +615,7 @@
        ========================================================================= */
     .rooms-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 390px), 1fr));
       gap: 1.25rem;
     }
 
@@ -692,13 +692,31 @@
       white-space: nowrap;
     }
 
+    .card-session-title {
+      display: flex;
+      align-items: baseline;
+      gap: 0.4rem;
+      min-width: 0;
+      line-height: 1.3;
+    }
+
+    .card-session-title-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
     .room-title {
-      font-size: 0.88rem;
+      font-size: 0.8rem;
       font-weight: 600;
       color: var(--text-primary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      min-width: 0;
     }
 
     .badge-stream {
@@ -1270,7 +1288,7 @@
           <!-- Card 1: Espectadores -->
           <div class="kpi-card">
             <div class="kpi-card-header">
-              <span class="kpi-label" id="lbl-kpi-viewers">ESPECTADORES</span>
+              <span class="kpi-label" id="lbl-kpi-viewers">ESPECTADORES:</span>
             </div>
             <div class="kpi-value" id="kpi-total-viewers">0</div>
           </div>
@@ -1278,7 +1296,7 @@
           <!-- Card 2: Sesiones -->
           <div class="kpi-card">
             <div class="kpi-card-header">
-              <span class="kpi-label" id="lbl-kpi-rooms">SESIONES</span>
+              <span class="kpi-label" id="lbl-kpi-rooms">SESIONES:</span>
             </div>
             <div class="kpi-value" id="kpi-total-rooms">0</div>
           </div>
@@ -1286,7 +1304,7 @@
           <!-- Card 3: SSE Stream (Sin punto parpadeante ni subtitulo) -->
           <div class="kpi-card kpi-card-wide">
             <div class="kpi-card-header">
-              <span class="kpi-label" id="lbl-kpi-sse">Telemetría de Red</span>
+              <span class="kpi-label" id="lbl-kpi-sse">TELEMETRÍA DE RED:</span>
             </div>
             <div class="kpi-sse-body">
               <div class="kpi-sse-text">
@@ -1336,20 +1354,20 @@
               </div>
             </div>
 
-            <!-- 2. Donut 1: Idiomas de Transmisión -->
+            <!-- 2. Donut 1: Top Idiomas -->
             <div class="chart-card chart-card-donut">
               <div class="chart-card-header chart-header-donut">
-                <h3 class="chart-title-donut" id="lbl-chart-source-title">IDIOMAS DE TRANSMISIÓN</h3>
+                <h3 class="chart-title-donut" id="lbl-chart-source-title">TOP IDIOMAS</h3>
               </div>
               <div class="chart-canvas-wrap donut-wrap">
                 <canvas id="chart-source-lang"></canvas>
               </div>
             </div>
 
-            <!-- 3. Donut 2: Traducciones Más Usadas -->
+            <!-- 3. Donut 2: Top Traducciones -->
             <div class="chart-card chart-card-donut">
               <div class="chart-card-header chart-header-donut">
-                <h3 class="chart-title-donut" id="lbl-chart-target-title">TRADUCCIONES MÁS USADAS</h3>
+                <h3 class="chart-title-donut" id="lbl-chart-target-title">TOP TRADUCCIONES</h3>
               </div>
               <div class="chart-canvas-wrap donut-wrap">
                 <canvas id="chart-target-lang"></canvas>
@@ -1460,9 +1478,9 @@
           slicerButtonAll: 'Sesiones (Todas)',
           slicerButtonCount: 'Sesiones ({count})',
           slicerButtonNone: 'Ninguna sesión',
-          kpiViewers: 'ESPECTADORES',
-          kpiRooms: 'SESIONES',
-          kpiSse: 'Telemetría de Red',
+          kpiViewers: 'ESPECTADORES:',
+          kpiRooms: 'SESIONES:',
+          kpiSse: 'TELEMETRÍA DE RED:',
           sseConnected: 'CONECTADO',
           sseReconnecting: 'RECONECTANDO...',
           readerMode: 'Modo Lector',
@@ -1537,9 +1555,9 @@
           chartLatencySub: 'Evolución temporal de inferencia y red',
           chartUsageTitle: 'CONSUMO DE AUDIO POR SESIÓN',
           chartUsageSub: 'Minutos acumulados procesados (Agnóstico a modelo)',
-          chartSourceTitle: 'IDIOMAS DE TRANSMISIÓN',
+          chartSourceTitle: 'TOP IDIOMAS',
           chartSourceSub: 'Distribución de audio de origen detectado',
-          chartTargetTitle: 'TRADUCCIONES MÁS USADAS',
+          chartTargetTitle: 'TOP TRADUCCIONES',
           chartTargetSub: 'Demanda de lectura en vivo por espectadores',
           pillTotal: 'Latencia Total',
           pillAsr: 'ASR Groq',
@@ -1559,9 +1577,9 @@
           slicerButtonAll: 'Sessions (All)',
           slicerButtonCount: 'Sessions ({count})',
           slicerButtonNone: 'No sessions',
-          kpiViewers: 'VIEWERS',
-          kpiRooms: 'SESSIONS',
-          kpiSse: 'Network Telemetry',
+          kpiViewers: 'VIEWERS:',
+          kpiRooms: 'SESSIONS:',
+          kpiSse: 'NETWORK TELEMETRY:',
           sseConnected: 'CONNECTED',
           sseReconnecting: 'RECONNECTING...',
           readerMode: 'Reader Mode',
@@ -1636,9 +1654,9 @@
           chartLatencySub: 'Inference and network time series',
           chartUsageTitle: 'AUDIO USAGE PER SESSION',
           chartUsageSub: 'Accumulated processed minutes (Model agnostic)',
-          chartSourceTitle: 'BROADCAST LANGUAGES',
+          chartSourceTitle: 'TOP LANGUAGES',
           chartSourceSub: 'Distribution of detected source audio',
-          chartTargetTitle: 'TOP USED TRANSLATIONS',
+          chartTargetTitle: 'TOP TRANSLATIONS',
           chartTargetSub: 'Live audience reading demand',
           pillTotal: 'Total Latency',
           pillAsr: 'Groq ASR',
@@ -1658,9 +1676,9 @@
           slicerButtonAll: 'Sessões (Todas)',
           slicerButtonCount: 'Sessões ({count})',
           slicerButtonNone: 'Nenhuma sessão',
-          kpiViewers: 'ESPECTADORES',
-          kpiRooms: 'SESSÕES',
-          kpiSse: 'Telemetria de Rede',
+          kpiViewers: 'ESPECTADORES:',
+          kpiRooms: 'SESSÕES:',
+          kpiSse: 'TELEMETRIA DE REDE:',
           sseConnected: 'CONECTADO',
           sseReconnecting: 'RECONECTANDO...',
           readerMode: 'Modo Leitor',
@@ -1732,9 +1750,9 @@
           chartLatencySub: 'Evolução temporal de inferência e rede',
           chartUsageTitle: 'CONSUMO DE ÁUDIO POR SESSÃO',
           chartUsageSub: 'Minutos acumulados processados (Agnóstico ao modelo)',
-          chartSourceTitle: 'IDIOMAS DE TRANSMISSÃO',
+          chartSourceTitle: 'TOP IDIOMAS',
           chartSourceSub: 'Distribuição do áudio de origem detectado',
-          chartTargetTitle: 'TRADUÇÕES MAIS USADAS',
+          chartTargetTitle: 'TOP TRADUÇÕES',
           chartTargetSub: 'Demanda de leitura ao vivo pelos espectadores',
           pillTotal: 'Latência Total',
           pillAsr: 'ASR Groq',
@@ -2851,7 +2869,6 @@
           <div class="card-header">
             <div class="room-identity">
               <span class="room-id-tag">${safeSessionId}</span>
-              <span class="room-title">${safeTitle}</span>
               ${(session.is_stream || session.stream_url) ? `<span class="badge-stream" title="${escapeHtml(session.stream_url || 'Stream en vivo activo')}">STREAM</span>` : ''}
             </div>
             <div class="header-right-actions">
@@ -2881,6 +2898,10 @@
           </div>
 
           <div class="card-body">
+            <div class="card-session-title">
+              <span class="card-session-title-label">Title:</span>
+              <span class="room-title" title="${safeTitle}">${safeTitle}</span>
+            </div>
             <!-- Métricas en fila con tooltips estilo Power BI -->
             <div class="metrics-bar">
               <div class="metric-item metric-latency">

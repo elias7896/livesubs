@@ -348,9 +348,10 @@ body.mode-reader {
   max-width: min(860px, 94vw);
   margin: auto auto; /* Inicia en el medio y se expande */
   width: 100%;
+  align-items: center;
 }
 
-/* Tarjeta individual de subtitulo (Sin background) */
+/* Tarjeta individual de subtitulo (Sin background, centrada) */
 .subtitle-card {
   background-color: transparent !important;
   background: transparent !important;
@@ -363,6 +364,9 @@ body.mode-reader {
   gap: 0.45rem;
   transition: var(--transition-smooth);
   animation: fadeIn 0.2s ease-out;
+  text-align: center;
+  align-items: center;
+  width: 100%;
 }
 
 .subtitle-card:hover {
@@ -376,9 +380,10 @@ body.mode-reader {
   font-family: var(--font-ui);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   font-size: 0.75rem;
   color: var(--text-time);
+  width: 100%;
 }
 
 .subtitle-time {
@@ -399,6 +404,8 @@ body.mode-reader {
   line-height: 1.4;
   color: var(--text-main);
   letter-spacing: -0.01em;
+  text-align: center;
+  width: 100%;
 }
 
 .subtitle-source {
@@ -410,6 +417,8 @@ body.mode-reader {
   border-left: none;
   padding-left: 0;
   margin-top: 0.2rem;
+  text-align: center;
+  width: 100%;
 }
 
 /* Ocultar texto original si el usuario lo desactiva */
