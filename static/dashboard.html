@@ -2377,35 +2377,43 @@
 
           const activeFiltered = filtered.filter(s => s.status !== 'closed');
 
-          if (activeFiltered.length === 1) {
-            const s = activeFiltered[0];
+          currentPoint.breakdown = activeFiltered.map(s => {
             const m = getSessionMetrics(s);
-            currentPoint.tot = m.tot;
-            currentPoint.asr = m.asr;
-            currentPoint.trans = m.trans;
-            currentPoint.breakdown = [{
+            return {
               id: s.session_id,
               title: s.title || ('Sala ' + s.session_id),
               tot: m.tot,
               asr: m.asr,
               trans: m.trans
-            }];
-          } else if (activeFiltered.length > 1) {
+            };
+          });
+
+          // Solo promediar salas que activamente estén reportando latencia > 0
+          // (evita que una sala recién creada en arranque hunda la telemetría a 0ms)
+          const producing = currentPoint.breakdown.filter(b => b.tot > 0);
+          if (producing.length > 0) {
             let sumTot = 0, sumAsr = 0, sumTrans = 0;
-            currentPoint.breakdown = activeFiltered.map(s => {
-              const m = getSessionMetrics(s);
-              sumTot += m.tot;
-              sumAsr += m.asr;
-              sumTrans += m.trans;
-              return {
-                id: s.session_id,
-                title: s.title || ('Sala ' + s.session_id),
-                tot: m.tot, asr: m.asr, trans: m.trans
-              };
+            producing.forEach(b => {
+              sumTot += b.tot;
+              sumAsr += b.asr;
+              sumTrans += b.trans;
             });
-            currentPoint.tot = Math.round(sumTot / activeFiltered.length);
-            currentPoint.asr = Math.round(sumAsr / activeFiltered.length);
-            currentPoint.trans = Math.round(sumTrans / activeFiltered.length);
+            currentPoint.tot = Math.round(sumTot / producing.length);
+            currentPoint.asr = Math.round(sumAsr / producing.length);
+            currentPoint.trans = Math.round(sumTrans / producing.length);
+          } else {
+            // Si las salas están en micro-silencio entre frases o la nueva sala recién conecta,
+            // conservar la última lectura conocida para no desplomar la gráfica abruptamente
+            const last = latencyHistory.length ? latencyHistory[latencyHistory.length - 1] : null;
+            if (last && last.tot > 0) {
+              currentPoint.tot = last.tot;
+              currentPoint.asr = last.asr;
+              currentPoint.trans = last.trans;
+            } else {
+              currentPoint.tot = 0;
+              currentPoint.asr = 0;
+              currentPoint.trans = 0;
+            }
           }
 
           latencyHistory.push(currentPoint);

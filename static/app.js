@@ -765,11 +765,19 @@
     } else {
       // Modo Lector Web y Modo Fullscreen
       if (isAutoScrollEnabled) {
-        requestAnimationFrame(function () {
-          if (isAutoScrollEnabled) {
-            scrollToBottom(true);
+        if (document.hidden) {
+          // Si la pestaña está en segundo plano, los navegadores suspenden requestAnimationFrame.
+          // Mantener la posición directamente al fondo para no acumular retraso vertical.
+          if (elements.subtitlesContainer) {
+            elements.subtitlesContainer.scrollTop = elements.subtitlesContainer.scrollHeight;
           }
-        });
+        } else {
+          requestAnimationFrame(function () {
+            if (isAutoScrollEnabled) {
+              scrollToBottom(true);
+            }
+          });
+        }
       } else if (isLive) {
         if (elements.btnResumeScroll) {
           elements.btnResumeScroll.classList.remove('hidden');
@@ -836,12 +844,16 @@
 
     const container = elements.subtitlesContainer;
     const dist = container.scrollHeight - (container.scrollTop + container.clientHeight);
-    const useSmooth = smooth && dist < 400;
+    const useSmooth = smooth && dist < 400 && !document.hidden;
 
-    container.scrollTo({
-      top: container.scrollHeight,
-      behavior: useSmooth ? 'smooth' : 'auto'
-    });
+    if (useSmooth) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+      });
+    } else {
+      container.scrollTop = container.scrollHeight;
+    }
 
     if (elements.btnResumeScroll) {
       elements.btnResumeScroll.classList.add('hidden');
@@ -851,8 +863,8 @@
   function handleContainerScroll() {
     if (!elements.subtitlesContainer) return;
 
-    // Si el scroll fue generado por animación programática y el usuario no está interactuando, nunca desactivar
-    if (isProgrammaticScroll && !userIsScrolling) {
+    // Si la pestaña está oculta o el scroll es programático, nunca pausar el auto-scroll
+    if (document.hidden || (isProgrammaticScroll && !userIsScrolling)) {
       return;
     }
 
@@ -1128,6 +1140,24 @@
       elements.subtitlesContainer.addEventListener('pointerdown', markUserScrolling, { passive: true });
       elements.subtitlesContainer.addEventListener('keydown', markUserScrolling, { passive: true });
     }
+
+    // Detección de cambio de pestaña: al regresar al foco, reanudar y forzar scroll al fondo de inmediato
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && isAutoScrollEnabled) {
+        userIsScrolling = false;
+        scrollToBottom(false);
+        setTimeout(function () {
+          if (isAutoScrollEnabled) scrollToBottom(false);
+        }, 60);
+      }
+    });
+
+    window.addEventListener('focus', function () {
+      if (!document.hidden && isAutoScrollEnabled) {
+        userIsScrolling = false;
+        scrollToBottom(false);
+      }
+    });
 
     // Alternar a Modo Fullscreen con URL real (/fullscreen)
     if (elements.btnModeToggle) {

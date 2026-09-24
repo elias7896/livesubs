@@ -108,41 +108,42 @@ LANG_NAMES = {
 
 
 class GroqKeyRotator:
-    """Gestiona rotación de múltiples API Keys de Groq con cooldown automático ante 429."""
+    """Gestiona rotación y balanceo round-robin de múltiples API Keys de Groq con cooldown automático ante 429."""
 
-    def __init__(self, api_keys: list[str], start_idx: int = 0):
+    def __init__(self, api_keys: list[str], start_idx: int = None):
         self.keys = [k for k in api_keys if k and k != "gsk_tu_api_key_aqui"]
         if not self.keys:
             raise ValueError("No se encontraron API Keys válidas de Groq.")
         self.clients = {k: Groq(api_key=k) for k in self.keys}
         self.cooldowns = {k: 0.0 for k in self.keys}
-        self.current_idx = start_idx % len(self.keys)
+        import random
+        self.current_idx = random.randint(0, len(self.keys) - 1) if start_idx is None else (start_idx % len(self.keys))
         self.lock = threading.Lock()
         logger.info(f"GroqKeyRotator inicializado con {len(self.keys)} clave(s) de API (inicio en índice {self.current_idx}).")
 
     def get_client(self) -> tuple[Groq, str]:
-        """Obtiene un cliente activo de Groq cuya clave no esté en enfriamiento."""
+        """Obtiene un cliente activo de Groq con balanceo round-robin cuya clave no esté en enfriamiento."""
         with self.lock:
             now = time.time()
             for _ in range(len(self.keys)):
                 key = self.keys[self.current_idx]
+                self.current_idx = (self.current_idx + 1) % len(self.keys)
                 if now >= self.cooldowns[key]:
                     return self.clients[key], key
-                self.current_idx = (self.current_idx + 1) % len(self.keys)
 
-            # Si todas están en cooldown, seleccionar la que expire antes
+            # Si todas están en cooldown, seleccionar la que expire antes con backoff mínimo
             best_key = min(self.keys, key=lambda k: self.cooldowns[k])
             wait_s = max(0.0, self.cooldowns[best_key] - now)
             if wait_s > 0:
-                logger.warning(f"Todas las API Keys en cooldown. Esperando {wait_s:.1f}s...")
-                time.sleep(min(wait_s, 2.0))
+                logger.warning(f"Todas las API Keys en cooldown temporal. Esperando {wait_s:.2f}s...")
+                time.sleep(min(wait_s, 1.5))
             return self.clients[best_key], best_key
 
-    def mark_rate_limited(self, key: str, cooldown_s: float = 6.0):
-        """Aplica cooldown a una clave tras recibir 429 y conmuta a la siguiente."""
+    def mark_rate_limited(self, key: str, cooldown_s: float = 2.5):
+        """Aplica cooldown breve a una clave tras recibir 429 y conmuta a la siguiente."""
         with self.lock:
-            # Si solo hay una clave, el cooldown debe ser corto (3-5s) para liberar el bucket sin congelar la cola
-            actual_cooldown = min(cooldown_s, 5.0) if len(self.keys) == 1 else cooldown_s
+            import random
+            actual_cooldown = cooldown_s + random.uniform(0.1, 0.4)
             self.cooldowns[key] = time.time() + actual_cooldown
             self.current_idx = (self.current_idx + 1) % len(self.keys)
             logger.warning(f"Clave {key[:8]}... en cooldown por {actual_cooldown:.1f}s. Conmutando a siguiente clave.")
@@ -469,8 +470,7 @@ class SubtitlePipeline:
                 return text, detected_lang
             except RateLimitError as e:
                 logger.warning(f"RateLimitError (429) en ASR con clave {active_key[:8]}... Conmutando...")
-                self.rotator.mark_rate_limited(active_key, cooldown_s=6.0)
-                time.sleep(1.0)
+                self.rotator.mark_rate_limited(active_key, cooldown_s=2.5)
                 continue
             except Exception as e:
                 logger.error(f"Error en Whisper ASR ({active_key[:8]}...): {e}")
@@ -545,8 +545,7 @@ class SubtitlePipeline:
                     break
                 except RateLimitError:
                     logger.warning(f"RateLimitError (429) en Chat con clave {active_key[:8]}... Conmutando...")
-                    self.rotator.mark_rate_limited(active_key, cooldown_s=6.0)
-                    time.sleep(1.0)
+                    self.rotator.mark_rate_limited(active_key, cooldown_s=2.5)
                     continue
                 except Exception as e:
                     logger.warning(f"Aviso en traducción multi ({model}): {e}")
