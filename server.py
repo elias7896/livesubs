@@ -745,6 +745,13 @@ class CreateSessionRequest(BaseModel):
     stream_url: Optional[str] = None
 
 
+class UpdateSessionRequest(BaseModel):
+    title: Optional[str] = None
+    source_lang: Optional[str] = None
+    target_lang: Optional[str] = None
+    stream_url: Optional[str] = None
+
+
 class StartStreamRequest(BaseModel):
     stream_url: str
 
@@ -901,6 +908,56 @@ async def get_session_info(session_id: str):
         raise HTTPException(status_code=404, detail="Sesión no encontrada :/")
     snap = telemetry._sessions.get(sid) or session_row
     return {"status": "ok", "session": snap}
+
+
+@app.patch("/api/sessions/{session_id}")
+@app.put("/api/sessions/{session_id}")
+async def update_session_info(session_id: str, req: UpdateSessionRequest):
+    """Actualiza título, stream_url o idioma de una sesión existente."""
+    sid = session_id.lower().strip()
+    session_row = await db.get_session(sid)
+    if not session_row and sid not in telemetry._sessions:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada")
+
+    # Actualizar en base de datos
+    updated_data = await db.update_session(
+        session_id=sid,
+        title=req.title,
+        stream_url=req.stream_url,
+        source_lang=req.source_lang,
+        target_lang=req.target_lang
+    )
+
+    # Actualizar en telemetría en memoria
+    if sid in telemetry._sessions:
+        if req.title is not None:
+            telemetry._sessions[sid]["title"] = req.title.strip() or sid
+        if req.stream_url is not None:
+            telemetry._sessions[sid]["stream_url"] = req.stream_url.strip() or None
+        if req.source_lang is not None:
+            telemetry._sessions[sid]["source_lang"] = req.source_lang
+        if req.target_lang is not None:
+            telemetry._sessions[sid]["target_lang"] = req.target_lang
+
+    # Gestionar worker si cambió el stream_url o el idioma
+    old_stream_url = (session_row.get("stream_url") or "") if session_row else ""
+    new_stream_url = (req.stream_url if req.stream_url is not None else old_stream_url).strip()
+    was_running = stream_manager.is_running(sid)
+
+    src = req.source_lang or (session_row.get("source_lang") if session_row else "auto") or "auto"
+    tgt = req.target_lang or (session_row.get("target_lang") if session_row else "es") or "es"
+
+    if req.stream_url is not None and new_stream_url != old_stream_url.strip():
+        if was_running:
+            await stream_manager.stop_worker(sid)
+        if new_stream_url:
+            await stream_manager.start_worker(sid, new_stream_url, src, tgt)
+    elif was_running and (req.source_lang is not None or req.target_lang is not None):
+        if new_stream_url:
+            await stream_manager.stop_worker(sid)
+            await stream_manager.start_worker(sid, new_stream_url, src, tgt)
+
+    return {"status": "updated", "session_id": sid, "session": updated_data}
 
 
 @app.get("/api/sessions/{session_id}/export")

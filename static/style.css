@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+
 /* ==========================================================================
    Variables y Reseteo Base (Minimalista Monocromatico / Estilo OpenAI)
    ========================================================================== */
@@ -12,9 +14,9 @@
   --text-muted: #a1a1aa;
   --text-time: #71717a;
 
-  /* Tipografia Monocromatica / Monospace */
-  --font-subtitles: "Consolas", ui-monospace, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
-  --font-ui: "Consolas", ui-monospace, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
+  /* Tipografia Monocromatica / Monospace (Inconsolata y JetBrains Mono para soporte Linux nativo) */
+  --font-subtitles: "Inconsolata", "JetBrains Mono", "Consolas", ui-monospace, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
+  --font-ui: "Inconsolata", "JetBrains Mono", "Consolas", ui-monospace, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
 
   --font-base-size: 1rem;
   --subtitle-font-size: 1.35rem;
@@ -72,7 +74,11 @@ body.mode-reader {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: -0.35rem;
+  margin-right: 0.2rem;
+}
+
+#btn-home-link {
+  margin-left: 0.35rem;
 }
 
 .status-dot {
@@ -1321,15 +1327,6 @@ body.mode-overlay.obs-transparent .subtitle-source {
   gap: 0.65rem;
 }
 
-.home-live-pulse {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background-color: #ffffff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
-  animation: blink-step 1.8s infinite steps(1);
-}
-
 .home-title {
   font-family: var(--font-ui);
   font-size: 0.92rem;
@@ -1463,11 +1460,6 @@ body.theme-light .home-card {
 body.theme-light .home-card-header {
   background: rgba(0, 0, 0, 0.02);
   border-color: #ded8cc;
-}
-
-body.theme-light .home-live-pulse {
-  background-color: #000000;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
 }
 
 body.theme-light .home-count-badge {

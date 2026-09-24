@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Control Room | Subtitulos en Vivo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="/static/vendor/chart.umd.min.js"></script>
   <script>
     if (typeof Chart === 'undefined') {
@@ -11,6 +14,8 @@
     }
   </script>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
+
     :root {
       --bg-dark: #000000;
       --bg-surface: #0a0a0a;
@@ -23,9 +28,9 @@
       --text-secondary: #a1a1aa;
       --text-muted: #71717a;
 
-      /* Tipografia Monocromatica / Monospace */
-      --font-ui: "Consolas", ui-monospace, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
-      --font-subtitles: "Consolas", ui-monospace, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
+      /* Tipografia Monocromatica / Monospace (Inconsolata y JetBrains Mono para soporte Linux nativo) */
+      --font-ui: "Inconsolata", "JetBrains Mono", "Consolas", ui-monospace, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
+      --font-subtitles: "Inconsolata", "JetBrains Mono", "Consolas", ui-monospace, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
       --transition-smooth: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -556,12 +561,12 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.02em;
-      padding: 0.4rem 0.35rem;
+      padding: 0.45rem 0.4rem;
       border-bottom: 1px solid var(--border-color);
-      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      border-right: 1px solid rgba(255, 255, 255, 0.22);
       text-align: right;
       z-index: 2;
-      font-size: 0.58rem;
+      font-size: 0.6rem;
       line-height: 1.2;
     }
 
@@ -574,7 +579,7 @@
     }
 
     .table-ms tbody tr {
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       transition: background 0.1s ease;
     }
 
@@ -583,11 +588,11 @@
     }
 
     .table-ms tbody td {
-      padding: 0.35rem 0.35rem;
+      padding: 0.38rem 0.4rem;
       color: var(--text-primary);
       text-align: right;
       font-variant-numeric: tabular-nums;
-      border-right: 1px solid rgba(255, 255, 255, 0.06);
+      border-right: 1px solid rgba(255, 255, 255, 0.14);
       font-size: 0.68rem;
     }
 
@@ -860,13 +865,11 @@
       min-width: 0;
     }
 
-    .badge-stream {
+    .badge-stream,
+    .badge-video {
       display: inline-flex;
       align-items: center;
       gap: 0.28rem;
-      color: #f87171;
-      background: rgba(239, 68, 68, 0.12);
-      border: 1px solid rgba(239, 68, 68, 0.35);
       font-size: 0.65rem;
       font-weight: 700;
       letter-spacing: 0.05em;
@@ -876,13 +879,34 @@
       flex-shrink: 0;
     }
 
-    .badge-stream::before {
+    .badge-stream::before,
+    .badge-video::before {
       content: '';
       width: 5px;
       height: 5px;
       border-radius: 50%;
+    }
+
+    .badge-stream {
+      color: #f87171;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+
+    .badge-stream::before {
       background: #ef4444;
       box-shadow: 0 0 6px #ef4444;
+    }
+
+    .badge-video {
+      color: #fca5a5;
+      background: rgba(248, 113, 113, 0.08);
+      border: 1px solid rgba(248, 113, 113, 0.25);
+    }
+
+    .badge-video::before {
+      background: #f87171;
+      box-shadow: 0 0 5px rgba(248, 113, 113, 0.5);
     }
 
     .header-right-actions {
@@ -917,6 +941,26 @@
     .pill-closed {
       color: var(--text-muted);
       border-color: var(--border-color);
+    }
+
+    /* Botón de Edición en el encabezado de sala */
+    .btn-edit {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.25rem 0.35rem;
+      border-radius: 3px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-smooth);
+    }
+
+    .btn-edit:hover {
+      background-color: rgba(255, 255, 255, 0.08);
+      border-color: var(--border-hover);
+      color: var(--text-primary);
     }
 
     /* Botón de Pausa / Reanudar en el encabezado de sala */
@@ -1621,6 +1665,40 @@
     </div>
   </div>
 
+  <!-- Modal Interactivo: Editar Transmisión -->
+  <div id="modal-edit-session" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lbl-edit-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="lbl-edit-title" class="modal-title">Editar Transmisión</h3>
+        <button type="button" id="btn-edit-close" class="modal-close-btn" aria-label="Cerrar">&times;</button>
+      </div>
+      <form id="form-edit-session" class="modal-form">
+        <input type="hidden" id="edit-session-id" />
+        <div class="modal-field">
+          <label id="lbl-edit-session-title" for="edit-input-title" class="modal-label">Título descriptivo</label>
+          <input type="text" id="edit-input-title" class="modal-input" placeholder="ej: Auditorio Principal" required autocomplete="off" />
+        </div>
+        <div class="modal-field">
+          <label id="lbl-edit-stream-url" for="edit-input-stream-url" class="modal-label">URL del Stream / Video</label>
+          <input type="url" id="edit-input-stream-url" class="modal-input" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" />
+        </div>
+        <div class="modal-field">
+          <label id="lbl-edit-source-lang" for="edit-select-source-lang" class="modal-label">Idioma Audio (Origen)</label>
+          <select id="edit-select-source-lang" class="modal-input">
+            <option value="es">Español (ES)</option>
+            <option value="en">English (EN)</option>
+            <option value="pt">Português (PT)</option>
+          </select>
+        </div>
+        <div id="edit-error-msg" class="modal-error hidden"></div>
+        <div class="modal-actions">
+          <button type="button" id="btn-edit-cancel" class="btn">Cancelar</button>
+          <button type="submit" id="btn-edit-submit" class="btn btn-highlight">Guardar cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
@@ -1684,7 +1762,14 @@
           latencyLabel: 'Latencia',
           asrLabel: 'ASR Groq',
           transLabel: 'Traducción',
-          viewersCardLabel: 'Viewers',
+          viewersCardLabel: 'ESPECTADORES',
+          btnEditTitle: 'Editar sesión',
+          modalEditTitle: 'Editar Transmisión',
+          lblEditTitle: 'Título descriptivo',
+          lblEditStreamUrl: 'URL del Stream / Video',
+          lblEditSourceLang: 'Idioma Audio (Origen)',
+          btnEditSave: 'Guardar cambios',
+          toastSessionUpdated: 'Sesión "{id}" actualizada con éxito.',
           origLangLabel: 'Lenguaje original:',
           rpmLabel: 'Groq RPM:',
           btnDownload: 'Descargar',
@@ -1790,7 +1875,14 @@
           latencyLabel: 'Latency',
           asrLabel: 'ASR Groq',
           transLabel: 'Translation',
-          viewersCardLabel: 'Viewers',
+          viewersCardLabel: 'VIEWERS',
+          btnEditTitle: 'Edit session',
+          modalEditTitle: 'Edit Transmission',
+          lblEditTitle: 'Descriptive title',
+          lblEditStreamUrl: 'Stream / Video URL',
+          lblEditSourceLang: 'Audio Language (Source)',
+          btnEditSave: 'Save changes',
+          toastSessionUpdated: 'Session "{id}" updated successfully.',
           origLangLabel: 'Original language:',
           rpmLabel: 'Groq RPM:',
           btnDownload: 'Download',
@@ -1896,7 +1988,14 @@
           latencyLabel: 'Latência',
           asrLabel: 'ASR Groq',
           transLabel: 'Tradução',
-          viewersCardLabel: 'Viewers',
+          viewersCardLabel: 'ESPECTADORES',
+          btnEditTitle: 'Editar sessão',
+          modalEditTitle: 'Editar Transmissão',
+          lblEditTitle: 'Título descritivo',
+          lblEditStreamUrl: 'URL do Stream / Vídeo',
+          lblEditSourceLang: 'Idioma do Áudio (Origem)',
+          btnEditSave: 'Salvar alterações',
+          toastSessionUpdated: 'Sessão "{id}" atualizada com sucesso.',
           origLangLabel: 'Língua original:',
           rpmLabel: 'Groq RPM:',
           btnDownload: 'Baixar',
@@ -2025,7 +2124,17 @@
         lblModalTargetLang: document.getElementById('lbl-modal-target-lang'),
         lblModalStreamUrl: document.getElementById('lbl-modal-stream-url'),
         btnModalSubmit: document.getElementById('btn-modal-submit'),
-        modalErrorMsg: document.getElementById('modal-error-msg')
+        modalErrorMsg: document.getElementById('modal-error-msg'),
+        modalEditSession: document.getElementById('modal-edit-session'),
+        formEditSession: document.getElementById('form-edit-session'),
+        editSessionId: document.getElementById('edit-session-id'),
+        editInputTitle: document.getElementById('edit-input-title'),
+        editInputStreamUrl: document.getElementById('edit-input-stream-url'),
+        editSelectSourceLang: document.getElementById('edit-select-source-lang'),
+        editErrorMsg: document.getElementById('edit-error-msg'),
+        btnEditClose: document.getElementById('btn-edit-close'),
+        btnEditCancel: document.getElementById('btn-edit-cancel'),
+        btnEditSubmit: document.getElementById('btn-edit-submit')
       };
 
       let eventSource = null;
@@ -2130,6 +2239,18 @@
         if (elements.lblModalTargetLang) elements.lblModalTargetLang.textContent = t.modalTargetLangLabel;
         if (elements.lblModalStreamUrl && t.modalStreamUrlLabel) elements.lblModalStreamUrl.textContent = t.modalStreamUrlLabel;
         if (elements.inputStreamUrl && t.modalStreamUrlPlaceholder) elements.inputStreamUrl.placeholder = t.modalStreamUrlPlaceholder;
+
+        // Edit modal labels
+        const lblEditTitle = document.getElementById('lbl-edit-title');
+        if (lblEditTitle && t.modalEditTitle) lblEditTitle.textContent = t.modalEditTitle;
+        const lblEditSessionTitle = document.getElementById('lbl-edit-session-title');
+        if (lblEditSessionTitle && t.lblEditTitle) lblEditSessionTitle.textContent = t.lblEditTitle;
+        const lblEditStreamUrl = document.getElementById('lbl-edit-stream-url');
+        if (lblEditStreamUrl && t.lblEditStreamUrl) lblEditStreamUrl.textContent = t.lblEditStreamUrl;
+        const lblEditSourceLang = document.getElementById('lbl-edit-source-lang');
+        if (lblEditSourceLang && t.lblEditSourceLang) lblEditSourceLang.textContent = t.lblEditSourceLang;
+        if (elements.btnEditSubmit && t.btnEditSave) elements.btnEditSubmit.textContent = t.btnEditSave;
+
         // Analytics labels
         if (elements.lblChartLatencyTitle) elements.lblChartLatencyTitle.textContent = t.chartLatencyTitle;
         if (elements.thColSession) elements.thColSession.textContent = t.thColSession;
@@ -3056,6 +3177,32 @@
         updateKpiMetrics();
       }
 
+      function getMediaKind(url) {
+        if (!url) return null;
+        const u = String(url).toLowerCase().trim();
+        if (!u) return null;
+        if (u.match(/\.(mp4|mkv|webm|mov|avi|m4v|flv)(\?|$)/i)) return 'video';
+        if (u.includes('youtube.com') || u.includes('youtu.be')) {
+          if (u.includes('/live') || u.includes('live=1')) return 'stream';
+          return 'video';
+        }
+        if (u.includes('vimeo.com')) return 'video';
+        if (u.startsWith('rtmp://') || u.startsWith('rtmps://') || u.startsWith('rtsp://') || u.includes('twitch.tv')) return 'stream';
+        if (u.includes('.m3u8') || u.includes('.mpd')) return 'stream';
+        return 'stream';
+      }
+
+      function renderMediaBadgeHtml(streamUrl) {
+        if (!streamUrl) return '';
+        const kind = getMediaKind(streamUrl);
+        if (!kind) return '';
+        const isVideo = kind === 'video';
+        const label = isVideo ? 'VIDEO' : 'STREAM';
+        const badgeClass = isVideo ? 'badge-video' : 'badge-stream';
+        const title = escapeHtml(streamUrl);
+        return `<span class="${badgeClass}" title="${title}">${label}</span>`;
+      }
+
       function createSessionCard(session, t) {
         const rawStatus = session.status || 'active';
         const isSilent = rawStatus === 'silent';
@@ -3089,10 +3236,19 @@
           <div class="card-header">
             <div class="room-identity">
               <span class="room-id-tag">${safeSessionId}</span>
-              ${(session.is_stream || session.stream_url) ? `<span class="badge-stream" title="${escapeHtml(session.stream_url || 'Stream en vivo activo')}">STREAM</span>` : ''}
+              ${renderMediaBadgeHtml(session.stream_url)}
             </div>
             <div class="header-right-actions">
               <span class="status-pill ${statusClass}">${statusLabel}</span>
+              <button class="btn-edit" 
+                      onclick="openEditSessionModal('${safeSessionId}')" 
+                      title="${t.btnEditTitle || 'Editar sesión'}" 
+                      aria-label="${t.btnEditTitle || 'Editar sesión'}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+              </button>
               <button class="btn-pause ${isInactive ? 'is-paused' : ''}" 
                       onclick="toggleSessionPause('${safeSessionId}', ${isInactive})" 
                       title="${isInactive ? t.btnResumeTitle : t.btnPauseTitle}" 
@@ -3229,22 +3385,29 @@
           titleLabelEl.textContent = expectedPrefix;
         }
 
-        // Badge STREAM
+        // Badge STREAM / VIDEO
         const roomIdentity = card.querySelector('.room-identity');
         if (roomIdentity) {
-          let streamBadge = roomIdentity.querySelector('.badge-stream');
-          const hasStream = (session.is_stream || session.stream_url);
-          if (hasStream) {
-            const streamTitle = session.stream_url || 'Stream en vivo activo';
-            if (!streamBadge) {
-              streamBadge = document.createElement('span');
-              streamBadge.className = 'badge-stream';
-              streamBadge.textContent = 'STREAM';
-              roomIdentity.appendChild(streamBadge);
+          const kind = getMediaKind(session.stream_url);
+          const currentBadge = roomIdentity.querySelector('.badge-stream, .badge-video');
+          if (kind) {
+            const isVideo = kind === 'video';
+            const targetClass = isVideo ? 'badge-video' : 'badge-stream';
+            const targetLabel = isVideo ? 'VIDEO' : 'STREAM';
+            const streamTitle = session.stream_url || (isVideo ? 'Video' : 'Stream en vivo activo');
+            if (!currentBadge) {
+              const newBadge = document.createElement('span');
+              newBadge.className = targetClass;
+              newBadge.textContent = targetLabel;
+              newBadge.title = streamTitle;
+              roomIdentity.appendChild(newBadge);
+            } else {
+              if (currentBadge.className !== targetClass) currentBadge.className = targetClass;
+              if (currentBadge.textContent !== targetLabel) currentBadge.textContent = targetLabel;
+              if (currentBadge.title !== streamTitle) currentBadge.title = streamTitle;
             }
-            if (streamBadge.title !== streamTitle) streamBadge.title = streamTitle;
-          } else if (streamBadge) {
-            streamBadge.remove();
+          } else if (currentBadge) {
+            currentBadge.remove();
           }
         }
 
@@ -3259,10 +3422,40 @@
           if (pillEl.textContent !== statusLabel) pillEl.textContent = statusLabel;
         }
 
-        // Botón Pausa / Reanudar (a la izquierda del botón de borrar)
+        // Header actions: Botón Editar y Botón Pausa / Reanudar
         const headerActions = card.querySelector('.header-right-actions');
+        let editBtn = card.querySelector('.btn-edit');
         let pauseBtn = card.querySelector('.btn-pause');
         const trashBtn = card.querySelector('.btn-trash');
+
+        // Botón Editar (a la izquierda del botón de pausa)
+        if (!editBtn && headerActions) {
+          editBtn = document.createElement('button');
+          editBtn.className = 'btn-edit';
+          editBtn.setAttribute('onclick', `openEditSessionModal('${safeSessionId}')`);
+          editBtn.innerHTML = `
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          `;
+          if (pauseBtn) {
+            headerActions.insertBefore(editBtn, pauseBtn);
+          } else if (trashBtn) {
+            headerActions.insertBefore(editBtn, trashBtn);
+          } else {
+            headerActions.appendChild(editBtn);
+          }
+        }
+        if (editBtn) {
+          const editTitle = t.btnEditTitle || 'Editar sesión';
+          if (editBtn.title !== editTitle) {
+            editBtn.title = editTitle;
+            editBtn.setAttribute('aria-label', editTitle);
+          }
+        }
+
+        // Botón Pausa / Reanudar (a la izquierda del botón de borrar)
         if (!pauseBtn && headerActions && trashBtn) {
           pauseBtn = document.createElement('button');
           headerActions.insertBefore(pauseBtn, trashBtn);
@@ -3305,16 +3498,24 @@
 
         const latVal = card.querySelector('.metric-latency .metric-value');
         if (latVal && latVal.textContent !== `${latencyTotal}ms`) latVal.textContent = `${latencyTotal}ms`;
+        const latLabel = card.querySelector('.metric-latency .metric-label');
+        if (latLabel && latLabel.textContent !== t.latencyLabel) latLabel.textContent = t.latencyLabel;
 
         const asrVal = card.querySelector('.metric-asr .metric-value');
         if (asrVal && asrVal.textContent !== `${asrMs}ms`) asrVal.textContent = `${asrMs}ms`;
+        const asrLabel = card.querySelector('.metric-asr .metric-label');
+        if (asrLabel && asrLabel.textContent !== t.asrLabel) asrLabel.textContent = t.asrLabel;
 
         const transVal = card.querySelector('.metric-trans .metric-value');
         if (transVal && transVal.textContent !== `${transMs}ms`) transVal.textContent = `${transMs}ms`;
+        const transLabel = card.querySelector('.metric-trans .metric-label');
+        if (transLabel && transLabel.textContent !== t.transLabel) transLabel.textContent = t.transLabel;
 
         const viewersVal = card.querySelector('.metric-viewers .metric-value');
         const viewersCount = String(session.viewers || 0);
         if (viewersVal && viewersVal.textContent !== viewersCount) viewersVal.textContent = viewersCount;
+        const viewersLabel = card.querySelector('.metric-viewers .metric-label');
+        if (viewersLabel && viewersLabel.textContent !== t.viewersCardLabel) viewersLabel.textContent = t.viewersCardLabel;
 
         // Session info footer
         const infoLang = card.querySelector('.info-orig-lang strong');
@@ -3646,6 +3847,79 @@
         }
       }
 
+      // -----------------------------------------------------------------------
+      // Modal: Editar Transmision
+      // -----------------------------------------------------------------------
+      window.openEditSessionModal = function (sessionId) {
+        const s = lastKnownSessions.find(item => item.session_id.toLowerCase().trim() === sessionId.toLowerCase().trim());
+        if (elements.editErrorMsg) {
+          elements.editErrorMsg.classList.add('hidden');
+          elements.editErrorMsg.textContent = '';
+        }
+        if (elements.editSessionId) elements.editSessionId.value = sessionId;
+        if (elements.editInputTitle) elements.editInputTitle.value = s ? (s.title || '') : '';
+        if (elements.editInputStreamUrl) elements.editInputStreamUrl.value = s ? (s.stream_url || '') : '';
+        if (elements.editSelectSourceLang) elements.editSelectSourceLang.value = (s && s.source_lang) ? s.source_lang : 'es';
+        if (elements.modalEditSession) elements.modalEditSession.classList.remove('hidden');
+        setTimeout(() => elements.editInputTitle && elements.editInputTitle.focus(), 60);
+      };
+
+      function closeEditSessionModal() {
+        if (elements.modalEditSession) elements.modalEditSession.classList.add('hidden');
+      }
+      window.closeEditSessionModal = closeEditSessionModal;
+
+      async function handleEditSessionSubmit(e) {
+        e.preventDefault();
+        const t = I18N[currentSiteLang] || I18N.es;
+        const sessionId = elements.editSessionId ? elements.editSessionId.value.trim().toLowerCase() : '';
+        const title = elements.editInputTitle ? elements.editInputTitle.value.trim() : '';
+        const streamUrl = elements.editInputStreamUrl ? elements.editInputStreamUrl.value.trim() : '';
+        const sourceLang = elements.editSelectSourceLang ? elements.editSelectSourceLang.value : 'es';
+
+        if (elements.editErrorMsg) elements.editErrorMsg.classList.add('hidden');
+
+        try {
+          const payload = {
+            title: title || undefined,
+            stream_url: streamUrl,
+            source_lang: sourceLang || undefined
+          };
+
+          const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            let errorText = 'Error al actualizar la transmisión';
+            if (typeof errData.detail === 'string') {
+              errorText = errData.detail;
+            } else if (Array.isArray(errData.detail)) {
+              errorText = errData.detail.map(d => d.msg || JSON.stringify(d)).join(', ');
+            }
+            if (elements.editErrorMsg) {
+              elements.editErrorMsg.textContent = errorText;
+              elements.editErrorMsg.classList.remove('hidden');
+            }
+            return;
+          }
+
+          closeEditSessionModal();
+          const toastMsg = (t.toastSessionUpdated || 'Sesión "{id}" actualizada con éxito.').replace('{id}', sessionId);
+          showToast(toastMsg);
+          latencyGraceUntil = Date.now() + 15000;
+          fetchTelemetry();
+        } catch (err) {
+          if (elements.editErrorMsg) {
+            elements.editErrorMsg.textContent = `Error de conexión: ${err.message}`;
+            elements.editErrorMsg.classList.remove('hidden');
+          }
+        }
+      }
+
       // Event Listeners
       if (elements.formGate) {
         elements.formGate.addEventListener('submit', handleGateSubmit);
@@ -3681,6 +3955,19 @@
         elements.formAddSession.addEventListener('submit', handleAddSessionSubmit);
       }
 
+      // Edit session modal events
+      if (elements.btnEditClose) {
+        elements.btnEditClose.addEventListener('click', closeEditSessionModal);
+      }
+
+      if (elements.btnEditCancel) {
+        elements.btnEditCancel.addEventListener('click', closeEditSessionModal);
+      }
+
+      if (elements.formEditSession) {
+        elements.formEditSession.addEventListener('submit', handleEditSessionSubmit);
+      }
+
       // Cerrar modal al cliquear fondo
       if (elements.modalAddSession) {
         elements.modalAddSession.addEventListener('click', (e) => {
@@ -3688,10 +3975,21 @@
         });
       }
 
-      // Tecla Escape para cerrar modal
+      if (elements.modalEditSession) {
+        elements.modalEditSession.addEventListener('click', (e) => {
+          if (e.target === elements.modalEditSession) closeEditSessionModal();
+        });
+      }
+
+      // Tecla Escape para cerrar modales
       document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !elements.modalAddSession.classList.contains('hidden')) {
-          closeAddSessionModal();
+        if (e.key === 'Escape') {
+          if (elements.modalAddSession && !elements.modalAddSession.classList.contains('hidden')) {
+            closeAddSessionModal();
+          }
+          if (elements.modalEditSession && !elements.modalEditSession.classList.contains('hidden')) {
+            closeEditSessionModal();
+          }
         }
       });
 

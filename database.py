@@ -287,6 +287,41 @@ class DatabaseManager:
                 return dict(row) if row else None
         return await asyncio.to_thread(_sync_op)
 
+    async def update_session(
+        self,
+        session_id: str,
+        title: Optional[str] = None,
+        stream_url: Optional[str] = None,
+        source_lang: Optional[str] = None,
+        target_lang: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Actualiza los campos editables de una sesión (título, stream_url, idioma de origen y destino)."""
+        def _sync_op():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM sessions WHERE session_id = ?", (session_id,))
+                row = cursor.fetchone()
+                if not row:
+                    return None
+                existing = dict(row)
+                new_title = title.strip() if title is not None else existing.get("title")
+                new_stream_url = stream_url.strip() if stream_url is not None else existing.get("stream_url")
+                new_source_lang = source_lang.strip() if source_lang is not None else existing.get("source_lang")
+                new_target_lang = target_lang.strip() if target_lang is not None else existing.get("target_lang")
+                now = datetime.now(timezone.utc).isoformat()
+
+                cursor.execute("""
+                    UPDATE sessions
+                    SET title = ?, stream_url = ?, source_lang = ?, target_lang = ?, updated_at = ?
+                    WHERE session_id = ?
+                """, (new_title, new_stream_url, new_source_lang, new_target_lang, now, session_id))
+                conn.commit()
+
+                cursor.execute("SELECT * FROM sessions WHERE session_id = ?", (session_id,))
+                updated_row = cursor.fetchone()
+                return dict(updated_row) if updated_row else None
+        return await asyncio.to_thread(_sync_op)
+
 
 
 # Instancia singleton global
