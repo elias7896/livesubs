@@ -58,6 +58,14 @@
         <span id="status-dot" class="status-dot connected"></span>
       </span>
 
+      <!-- Icono de Casa para ir al Home (Siempre visible) -->
+      <a href="/" id="btn-home-link" class="btn-control btn-icon-ctrl" title="Ir al Home" aria-label="Home">
+        <svg class="icon-home" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+      </a>
+
       <!-- Selector de Sala / Sesión -->
       <div class="slicer-item" title="Seleccionar sala o sesión">
         <span id="lbl-prefix-session" class="slicer-prefix">Sesión
@@ -198,6 +206,24 @@
 
   <!-- Contenedor Principal de Subtitulos -->
   <main id="subtitles-container" class="subtitles-container">
+    <!-- Vista Home con cuadro en el medio con todas las sesiones activas -->
+    <div id="home-view" class="home-view hidden">
+      <div class="home-card">
+        <div class="home-card-header">
+          <div class="home-card-title-wrap">
+            <span class="home-live-pulse"></span>
+            <h2 id="lbl-home-title" class="home-title">SESIONES ACTIVAS</h2>
+          </div>
+          <span id="home-sessions-count" class="home-count-badge">0</span>
+        </div>
+        <div id="home-sessions-list" class="home-sessions-list">
+          <div class="home-empty-state">
+            <p id="lbl-home-empty">No hay sesiones activas en este momento.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Mensaje de estado inicial cuando no hay subtitulos -->
     <div id="empty-state" class="empty-state">
       <div class="empty-spinner"></div>

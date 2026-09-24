@@ -75,6 +75,12 @@
     btnObsCancel: document.getElementById('btn-obs-cancel'),
     btnObsCopy: document.getElementById('btn-obs-copy'),
     lblObsCopyBtn: document.getElementById('lbl-obs-copy-btn'),
+    btnHomeLink: document.getElementById('btn-home-link'),
+    homeView: document.getElementById('home-view'),
+    lblHomeTitle: document.getElementById('lbl-home-title'),
+    lblHomeEmpty: document.getElementById('lbl-home-empty'),
+    homeSessionsCount: document.getElementById('home-sessions-count'),
+    homeSessionsList: document.getElementById('home-sessions-list'),
   };
 
   // -------------------------------------------------------------------------
@@ -83,6 +89,9 @@
   const I18N = {
     es: {
       siteTitle: 'Subtítulos en Vivo | Live Translation',
+      homeTitle: 'SESIONES ACTIVAS',
+      homeNoSessions: 'No hay sesiones activas en este momento.',
+      homeSelectPrompt: 'Seleccionar sesión...',
       sessionPrefix: 'Sesión',
       langPrefix: 'Idioma',
       sourceLabel: 'Lenguaje original:',
@@ -133,6 +142,9 @@
     },
     en: {
       siteTitle: 'Live Subtitles | Live Translation',
+      homeTitle: 'ACTIVE SESSIONS',
+      homeNoSessions: 'No active sessions at this moment.',
+      homeSelectPrompt: 'Select session...',
       sessionPrefix: 'Session',
       langPrefix: 'Language',
       sourceLabel: 'Original language:',
@@ -183,6 +195,9 @@
     },
     pt: {
       siteTitle: 'Legendas ao Vivo | Live Translation',
+      homeTitle: 'SESSÕES ATIVAS',
+      homeNoSessions: 'Nenhuma sessão ativa no momento.',
+      homeSelectPrompt: 'Selecionar sessão...',
       sessionPrefix: 'Sessao',
       langPrefix: 'Idioma',
       sourceLabel: 'Idioma original:',
@@ -245,6 +260,11 @@
     elements.body.classList.add('obs-transparent');
   }
   let currentSession = urlParams.get('session') || urlParams.get('session_id') || urlParams.get('room') || '';
+  let isHome = !isFullscreenMode && !isOverlayMode && !currentSession;
+  let cachedSessions = [];
+  if (isHome && elements.body) {
+    elements.body.classList.add('is-home');
+  }
   let rawLang = (urlParams.get('lang') || urlParams.get('pair') || localStorage.getItem('reader_lang') || 'es').toLowerCase();
   if (rawLang.includes('-')) {
     rawLang = rawLang.split('-')[1];
@@ -493,6 +513,15 @@
     if (elements.notFoundTitle && !isSessionNotFound) elements.notFoundTitle.textContent = t.sessionNotFoundTitle;
     if (elements.notFoundSubtitle && !isSessionNotFound) elements.notFoundSubtitle.textContent = t.sessionNotFoundDesc;
     if (elements.lblNotFoundHome) elements.lblNotFoundHome.textContent = t.sessionNotFoundHome;
+
+    if (elements.lblHomeTitle) elements.lblHomeTitle.textContent = t.homeTitle;
+    if (elements.lblHomeEmpty) elements.lblHomeEmpty.textContent = t.homeNoSessions;
+    if (isHome) {
+      renderHomeSessions(cachedSessions);
+      if (elements.selectSession && elements.selectSession.options.length > 0 && elements.selectSession.options[0].value === '') {
+        elements.selectSession.options[0].textContent = t.homeSelectPrompt;
+      }
+    }
   }
 
   function applyViewMode() {
@@ -537,6 +566,113 @@
     if (currentUserLang) params.set('lang', currentUserLang);
     const qs = params.toString() ? '?' + params.toString() : '';
     window.location.href = '/' + qs;
+  }
+
+  function escapeHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function renderHomeSessions(sessions) {
+    if (!elements.homeSessionsList) return;
+    const t = I18N[currentSiteLang] || I18N.es;
+    const activeSessions = (sessions || []).filter(s => {
+      const st = (s.status || 'active').toLowerCase();
+      return st !== 'closed' && st !== 'inactive';
+    });
+
+    if (elements.homeSessionsCount) {
+      elements.homeSessionsCount.textContent = activeSessions.length;
+    }
+
+    if (activeSessions.length === 0) {
+      elements.homeSessionsList.innerHTML = `
+        <div class="home-empty-state">
+          <p id="lbl-home-empty">${t.homeNoSessions || 'No hay sesiones activas en este momento.'}</p>
+        </div>
+      `;
+      return;
+    }
+
+    elements.homeSessionsList.innerHTML = activeSessions.map(s => {
+      const sid = (s.session_id || '').toLowerCase().trim();
+      const title = s.title || ('Sala ' + sid.charAt(0).toUpperCase() + sid.slice(1));
+      const srcLang = (s.source_lang && s.source_lang !== 'auto' ? s.source_lang : 'EN').toUpperCase();
+      const tgtLang = (s.target_lang || 'ES').toUpperCase();
+      const langBadge = `${srcLang} -> ${tgtLang}`;
+      return `
+        <a href="/?session=${encodeURIComponent(sid)}" class="home-session-item" data-session-id="${sid}">
+          <div class="home-session-left">
+            <span class="home-session-dot"></span>
+            <div class="home-session-texts">
+              <span class="home-session-title">${escapeHtml(title)}</span>
+              <span class="home-session-id">ID: ${escapeHtml(sid)}</span>
+            </div>
+          </div>
+          <div class="home-session-right">
+            <span class="home-session-lang-tag">${escapeHtml(langBadge)}</span>
+            <svg class="home-session-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </div>
+        </a>
+      `;
+    }).join('');
+
+    const items = elements.homeSessionsList.querySelectorAll('.home-session-item');
+    items.forEach(item => {
+      item.addEventListener('click', function (e) {
+        e.preventDefault();
+        const sid = item.getAttribute('data-session-id');
+        enterSession(sid);
+      });
+    });
+  }
+
+  function navigateToHome() {
+    isHome = true;
+    currentSession = '';
+    if (elements.body) elements.body.classList.add('is-home');
+    hideSessionNotFoundUI();
+    cleanupSocket();
+    if (ws) {
+      try { ws.close(); } catch (e) {}
+      ws = null;
+    }
+    if (elements.subtitlesList) elements.subtitlesList.innerHTML = '';
+    const url = new URL(window.location);
+    url.searchParams.delete('session');
+    url.searchParams.delete('session_id');
+    url.searchParams.delete('room');
+    window.history.pushState({}, '', url.pathname.replace(/\/+$/, '') || '/');
+    loadAvailableSessions();
+  }
+
+  function enterSession(sessionId) {
+    if (!sessionId) return;
+    currentSession = sessionId.toLowerCase().trim();
+    isHome = false;
+    if (elements.body) elements.body.classList.remove('is-home');
+    hideSessionNotFoundUI();
+    if (elements.selectSession) {
+      elements.selectSession.value = currentSession;
+    }
+    const url = new URL(window.location);
+    url.searchParams.set('session', currentSession);
+    window.history.pushState({}, '', url);
+
+    if (elements.subtitlesList) elements.subtitlesList.innerHTML = '';
+    if (elements.emptyState) elements.emptyState.style.display = 'flex';
+
+    cleanupSocket();
+    if (ws) {
+      try { ws.close(); } catch (e) {}
+      ws = null;
+    }
+    connectWebSocket();
   }
 
   function updateSourceTextVisibility() {
@@ -622,6 +758,11 @@
   }
 
   function connectWebSocket() {
+    if (isHome || !currentSession) {
+      setStatus('connected');
+      return;
+    }
+
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -691,7 +832,7 @@
   }
 
   function scheduleReconnect() {
-    if (isSessionNotFound) return;
+    if (isHome || isSessionNotFound || !currentSession) return;
     if (reconnectTimer) return;
     reconnectTimer = setTimeout(function () {
       reconnectTimer = null;
@@ -1174,13 +1315,31 @@
       if (!res.ok) return;
       const data = await res.json();
       const sessions = data.sessions || [];
+      cachedSessions = sessions;
+      renderHomeSessions(sessions);
+
+      const t = I18N[currentSiteLang] || I18N.es;
       elements.selectSession.innerHTML = '';
+
+      if (isHome) {
+        const defaultOpt = document.createElement('option');
+        defaultOpt.value = '';
+        defaultOpt.textContent = t.homeSelectPrompt || 'Seleccionar sesión...';
+        defaultOpt.disabled = true;
+        defaultOpt.selected = true;
+        elements.selectSession.appendChild(defaultOpt);
+      }
+
       if (sessions.length === 0) {
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = 'Sin sesiones';
-        elements.selectSession.appendChild(opt);
-        showSessionNotFoundUI('Sesión no encontrada', 'No hay ninguna sesión activa en este momento.');
+        if (!isHome) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'Sin sesiones';
+          elements.selectSession.appendChild(opt);
+          showSessionNotFoundUI('Sesión no encontrada', 'No hay ninguna sesión activa en este momento.');
+        } else {
+          hideSessionNotFoundUI();
+        }
         return;
       }
 
@@ -1193,7 +1352,7 @@
           const opt = document.createElement('option');
           opt.value = sid;
           opt.textContent = s.title || ('Sala ' + sid.charAt(0).toUpperCase() + sid.slice(1));
-          if (sid === currentNorm) {
+          if (!isHome && sid === currentNorm) {
             opt.selected = true;
             sessionExists = true;
           }
@@ -1201,13 +1360,13 @@
         }
       });
 
-      if (currentSession && !sessionExists) {
-        // La sesión especificada en la URL no existe o fue eliminada
-        showSessionNotFoundUI('Sesión no encontrada', `La sesión "${currentSession}" fue eliminada o no existe.`);
-      } else {
-        if (!currentSession && sessions.length > 0) {
-          currentSession = sessions[0].session_id.toLowerCase().trim();
+      if (!isHome) {
+        if (currentSession && !sessionExists) {
+          showSessionNotFoundUI('Sesión no encontrada', `La sesión "${currentSession}" fue eliminada o no existe.`);
+        } else {
+          hideSessionNotFoundUI();
         }
+      } else {
         hideSessionNotFoundUI();
       }
     } catch (e) {
@@ -1219,24 +1378,39 @@
   // Listeners de Eventos
   // -------------------------------------------------------------------------
   function setupEventListeners() {
-    // Cambio dinámico de sala / sesión
+    // Icono de Casa para ir al Home
+    if (elements.btnHomeLink) {
+      elements.btnHomeLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        navigateToHome();
+      });
+    }
+
+    // Botón en pantalla de sesión no encontrada para ir al Home
+    if (elements.btnNotFoundHome) {
+      elements.btnNotFoundHome.addEventListener('click', function (e) {
+        e.preventDefault();
+        navigateToHome();
+      });
+    }
+
+    // Navegación con historial del navegador (Back / Forward)
+    window.addEventListener('popstate', function () {
+      const params = new URLSearchParams(window.location.search);
+      const sid = params.get('session') || params.get('session_id') || params.get('room') || '';
+      if (sid) {
+        enterSession(sid);
+      } else {
+        navigateToHome();
+      }
+    });
+
+    // Cambio dinámico de sala / sesión desde el selector de la barra superior
     if (elements.selectSession) {
       elements.selectSession.addEventListener('change', function (e) {
-        currentSession = e.target.value;
-        if (!currentSession) return;
-        hideSessionNotFoundUI();
-        const url = new URL(window.location);
-        url.searchParams.set('session', currentSession);
-        window.history.replaceState({}, '', url);
-
-        // Limpiar lista y reconectar a la nueva sesión
-        elements.subtitlesList.innerHTML = '';
-        if (elements.emptyState) elements.emptyState.style.display = 'flex';
-
-        if (ws) {
-          ws.close();
-        }
-        connectWebSocket();
+        const sid = e.target.value;
+        if (!sid) return;
+        enterSession(sid);
       });
     }
 
@@ -1464,6 +1638,11 @@
   // Inicialización Global
   // -------------------------------------------------------------------------
   function init() {
+    if (isHome) {
+      if (elements.body) elements.body.classList.add('is-home');
+    } else {
+      if (elements.body) elements.body.classList.remove('is-home');
+    }
     hideSessionNotFoundUI();
     applySiteTranslations();
     applyTheme();
@@ -1475,7 +1654,11 @@
     setupEventListeners();
     loadAvailableSessions();
     window.addEventListener('focus', loadAvailableSessions);
-    connectWebSocket();
+    if (!isHome && currentSession) {
+      connectWebSocket();
+    } else if (isHome) {
+      setStatus('connected');
+    }
   }
 
   if (document.readyState === 'loading') {

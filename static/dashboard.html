@@ -509,23 +509,25 @@
       }
     }
 
-    /* Tabla de Métricas (Power BI Style) */
+    /* Tabla de Métricas (Power BI Style - Sin Título, Altura Completa) */
     .chart-card-table {
       background-color: transparent;
       display: flex;
       flex-direction: column;
-      gap: 0.55rem;
       width: 100%;
       min-width: 0;
+      height: 100%;
     }
 
     .table-ms-wrap {
       background-color: var(--bg-dark);
       border-radius: 4px;
-      height: 200px;
+      height: 100%;
+      min-height: 236px;
       overflow-y: auto;
-      overflow-x: auto;
+      overflow-x: hidden;
       border: 1px solid var(--border-color);
+      flex: 1;
     }
 
     .table-ms-wrap::-webkit-scrollbar {
@@ -541,9 +543,9 @@
     .table-ms {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.72rem;
+      font-size: 0.68rem;
       font-family: var(--font-ui);
-      white-space: nowrap;
+      table-layout: auto;
     }
 
     .table-ms thead th {
@@ -553,12 +555,18 @@
       color: var(--text-muted);
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
-      padding: 0.45rem 0.6rem;
+      letter-spacing: 0.02em;
+      padding: 0.4rem 0.35rem;
       border-bottom: 1px solid var(--border-color);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
       text-align: right;
       z-index: 2;
-      font-size: 0.68rem;
+      font-size: 0.58rem;
+      line-height: 1.2;
+    }
+
+    .table-ms thead th:last-child {
+      border-right: none;
     }
 
     .table-ms thead th:first-child {
@@ -575,19 +583,26 @@
     }
 
     .table-ms tbody td {
-      padding: 0.38rem 0.6rem;
+      padding: 0.35rem 0.35rem;
       color: var(--text-primary);
       text-align: right;
       font-variant-numeric: tabular-nums;
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.68rem;
+    }
+
+    .table-ms tbody td:last-child {
+      border-right: none;
     }
 
     .table-ms tbody td:first-child {
       text-align: left;
       font-weight: 600;
       color: var(--text-primary);
-      max-width: 90px;
+      max-width: 80px;
       overflow: hidden;
       text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .table-ms-val-total {
@@ -1363,9 +1378,12 @@
           </div>
         </div>
 
-        <!-- Modo Lector -->
-        <a href="/" class="btn" target="_blank" title="Abrir Modo Lector Web">
-          <span id="lbl-reader-mode">Modo Lector</span>
+        <!-- Ir al Home -->
+        <a href="/" class="btn btn-icon-ctrl" title="Ir al Home" aria-label="Home">
+          <svg class="icon-home" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
         </a>
 
         <!-- Boton Refrescar clasico con icono de flecha circular -->
@@ -1465,13 +1483,8 @@
               </div>
             </div>
 
-            <!-- Tabla de Métricas por Sesión (Power BI Style) -->
+            <!-- Tabla de Métricas por Sesión (Power BI Style - Sin título) -->
             <div class="chart-card chart-card-table">
-              <div class="chart-card-header">
-                <div class="chart-title-group">
-                  <h3 class="chart-title-main" id="lbl-table-ms-title">TELEMETRÍA EN VIVO</h3>
-                </div>
-              </div>
               <div class="table-ms-wrap chart-dot-pattern">
                 <table class="table-ms">
                   <thead>
@@ -1504,20 +1517,20 @@
               </div>
             </div>
 
-            <!-- 2. Donut 1: Top Idiomas -->
+            <!-- 2. Donut 1: Top Idiomas de las Sesiones -->
             <div class="chart-card chart-card-donut">
               <div class="chart-card-header chart-header-donut">
-                <h3 class="chart-title-donut" id="lbl-chart-source-title">TOP IDIOMAS</h3>
+                <h3 class="chart-title-donut" id="lbl-chart-source-title">TOP IDIOMAS DE LAS SESIONES</h3>
               </div>
               <div class="chart-canvas-wrap donut-wrap">
                 <canvas id="chart-source-lang"></canvas>
               </div>
             </div>
 
-            <!-- 3. Donut 2: Top Traducciones -->
+            <!-- 3. Donut 2: Traducciones Más Usadas -->
             <div class="chart-card chart-card-donut">
               <div class="chart-card-header chart-header-donut">
-                <h3 class="chart-title-donut" id="lbl-chart-target-title">TOP TRADUCCIONES</h3>
+                <h3 class="chart-title-donut" id="lbl-chart-target-title">TRADUCCIONES MÁS USADAS</h3>
               </div>
               <div class="chart-canvas-wrap donut-wrap">
                 <canvas id="chart-target-lang"></canvas>
@@ -1705,9 +1718,9 @@
           chartLatencySub: 'Evolución temporal de inferencia y red',
           chartUsageTitle: 'CONSUMO DE AUDIO POR SESIÓN',
           chartUsageSub: 'Minutos acumulados procesados (Agnóstico a modelo)',
-          chartSourceTitle: 'TOP IDIOMAS',
+          chartSourceTitle: 'TOP IDIOMAS DE LAS SESIONES',
           chartSourceSub: 'Distribución de audio de origen detectado',
-          chartTargetTitle: 'TOP TRADUCCIONES',
+          chartTargetTitle: 'TRADUCCIONES MÁS USADAS',
           chartTargetSub: 'Demanda de lectura en vivo por espectadores',
           pillTotal: 'Latencia Total',
           pillAsr: 'ASR Groq',
@@ -1811,9 +1824,9 @@
           chartLatencySub: 'Inference and network time series',
           chartUsageTitle: 'AUDIO USAGE PER SESSION',
           chartUsageSub: 'Accumulated processed minutes (Model agnostic)',
-          chartSourceTitle: 'TOP LANGUAGES',
+          chartSourceTitle: 'TOP SESSION LANGUAGES',
           chartSourceSub: 'Distribution of detected source audio',
-          chartTargetTitle: 'TOP TRANSLATIONS',
+          chartTargetTitle: 'MOST USED TRANSLATIONS',
           chartTargetSub: 'Live audience reading demand',
           pillTotal: 'Total Latency',
           pillAsr: 'Groq ASR',
@@ -1914,9 +1927,9 @@
           chartLatencySub: 'Evolução temporal de inferência e rede',
           chartUsageTitle: 'CONSUMO DE ÁUDIO POR SESSÃO',
           chartUsageSub: 'Minutos acumulados processados (Agnóstico ao modelo)',
-          chartSourceTitle: 'TOP IDIOMAS',
+          chartSourceTitle: 'TOP IDIOMAS DAS SESSÕES',
           chartSourceSub: 'Distribuição do áudio de origem detectado',
-          chartTargetTitle: 'TOP TRADUÇÕES',
+          chartTargetTitle: 'TRADUÇÕES MAIS USADAS',
           chartTargetSub: 'Demanda de leitura ao vivo pelos espectadores',
           pillTotal: 'Latência Total',
           pillAsr: 'ASR Groq',
@@ -1966,7 +1979,6 @@
         lblKpiSseTitle: document.getElementById('lbl-kpi-sse-title'),
         // Sección Analytics & Gráficos
         lblChartLatencyTitle: document.getElementById('lbl-chart-latency-title'),
-        lblTableMsTitle: document.getElementById('lbl-table-ms-title'),
         thColSession: document.getElementById('th-col-session'),
         thColTotal: document.getElementById('th-col-total'),
         thColAsr: document.getElementById('th-col-asr'),
@@ -2120,7 +2132,6 @@
         if (elements.inputStreamUrl && t.modalStreamUrlPlaceholder) elements.inputStreamUrl.placeholder = t.modalStreamUrlPlaceholder;
         // Analytics labels
         if (elements.lblChartLatencyTitle) elements.lblChartLatencyTitle.textContent = t.chartLatencyTitle;
-        if (elements.lblTableMsTitle) elements.lblTableMsTitle.textContent = t.tableMsTitle;
         if (elements.thColSession) elements.thColSession.textContent = t.thColSession;
         if (elements.thColTotal) elements.thColTotal.textContent = t.thColTotal;
         if (elements.thColAsr) elements.thColAsr.textContent = t.thColAsr;

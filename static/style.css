@@ -1281,6 +1281,258 @@ body.mode-overlay.obs-transparent .subtitle-source {
 }
 
 /* ==========================================================================
+   Vista Home (Cuadro en el medio con todas las sesiones activas)
+   ========================================================================== */
+.home-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: calc(100vh - 120px);
+  padding: 2rem 1rem;
+  box-sizing: border-box;
+}
+
+.home-card {
+  width: 100%;
+  max-width: 580px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.home-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.4rem;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.home-card-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.home-live-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+  animation: blink-step 1.8s infinite steps(1);
+}
+
+.home-title {
+  font-family: var(--font-ui);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.home-count-badge {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+}
+
+.home-sessions-list {
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.home-session-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.home-session-item:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.home-session-left {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.home-session-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.home-session-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.home-session-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-session-id {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.home-session-right {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+}
+
+.home-session-lang-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.45rem;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  color: var(--text-muted);
+}
+
+.home-session-arrow {
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+
+.home-session-item:hover .home-session-arrow {
+  color: var(--text-main);
+  transform: translateX(3px);
+}
+
+.home-empty-state {
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+/* Adaptación Tema Claro */
+body.theme-light .home-card {
+  background-color: #ffffff;
+  border-color: #ded8cc;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
+}
+
+body.theme-light .home-card-header {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: #ded8cc;
+}
+
+body.theme-light .home-live-pulse {
+  background-color: #000000;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+}
+
+body.theme-light .home-count-badge {
+  background: rgba(0, 0, 0, 0.06);
+  color: #000000;
+  border-color: #ded8cc;
+}
+
+body.theme-light .home-session-item {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: #ded8cc;
+}
+
+body.theme-light .home-session-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: #b8b0a0;
+}
+
+body.theme-light .home-session-dot {
+  background: #000000;
+}
+
+body.theme-light .home-session-title {
+  color: #000000;
+}
+
+body.theme-light .home-session-id {
+  color: #555555;
+}
+
+body.theme-light .home-session-lang-tag {
+  background: rgba(0, 0, 0, 0.06);
+  color: #444444;
+}
+
+body.theme-light .home-session-item:hover .home-session-arrow {
+  color: #000000;
+}
+
+/* ==========================================================================
+   Visibilidad de la Barra de Arriba en Modo Home vs Modo Sesión
+   En Home: Solo Casa, Punto en Vivo, Sesión ->, Idioma ->, Settings y Site Lang
+   ========================================================================== */
+body.is-home #btn-toggle-theme,
+body.is-home #btn-toggle-source,
+body.is-home #btn-toggle-scroll,
+body.is-home #btn-scroll-bottom,
+body.is-home #font-size-controls,
+body.is-home #btn-mode-toggle,
+body.is-home #empty-state,
+body.is-home #not-found-state,
+body.is-home #subtitles-list,
+body.is-home #btn-resume-scroll {
+  display: none !important;
+}
+
+body:not(.is-home) #home-view {
+  display: none !important;
+}
+
+body.is-home #home-view {
+  display: flex !important;
+}
+
+/* ==========================================================================
    Responsive para Laptops (13" a 15", 1024px a 1400px) y Dispositivos Móviles
    ========================================================================== */
 @media (max-width: 1400px) {
