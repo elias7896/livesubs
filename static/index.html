@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subtitulos en Vivo | Live Translation</title>
+  <link rel="stylesheet" href="/static/style.css?v=20260920_5">
+</head>
+<body class="mode-reader">
+
+  <!-- Header de Control (Oculto automaticamente en Modo Overlay) -->
+  <header id="main-header" class="header">
+    <div class="header-left">
+      <!-- Indicador en vivo parpadeante alejado hacia la izquierda -->
+      <span class="live-dot-container" title="En vivo">
+        <span id="status-dot" class="status-dot connected"></span>
+      </span>
+
+      <!-- Selector de Sala / Sesion -->
+      <div class="slicer-item" title="Seleccionar sala o sesion">
+        <span id="lbl-prefix-session" class="slicer-prefix">Sesion
+          <svg class="slicer-arrow-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </span>
+        <select id="select-session" class="select-control" aria-label="Seleccionar sala o sesion">
+        </select>
+      </div>
+
+      <!-- Selector de Idioma de Subtitulos Compacto agrupado con el boton de tema -->
+      <div class="slicer-lang-group">
+        <div class="slicer-item slicer-lang-compact" title="Seleccionar idioma de subtítulos">
+          <span id="lbl-prefix-lang" class="slicer-prefix slicer-prefix-compact">Idioma</span>
+          <div class="select-lang-wrapper">
+            <select id="select-lang-pair" class="select-control select-lang-compact" aria-label="Seleccionar idioma de subtítulos">
+              <option value="es" selected>Español</option>
+              <option value="en">English</option>
+              <option value="pt">Português</option>
+            </select>
+            <svg class="select-lang-arrow" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Alternar Modo Claro / Modo Oscuro (junto al slicer de idioma) -->
+        <button id="btn-toggle-theme" class="btn-control btn-icon-ctrl" title="Alternar entre modo claro y oscuro" aria-label="Alternar tema">
+          <svg class="theme-icon icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <!-- Alternar visibilidad del idioma original (Lenguaje original) -->
+      <button id="btn-toggle-source" class="btn-control" title="Mostrar u ocultar audio original" aria-label="Alternar texto original">
+        <span id="lbl-source-container" class="btn-label"><span id="lbl-source-text">Lenguaje original:</span> <strong id="lbl-source-state">ON</strong></span>
+      </button>
+
+      <!-- Alternar auto-scroll -->
+      <button id="btn-toggle-scroll" class="btn-control active" title="Pausar o activar auto-scroll" aria-label="Alternar auto-scroll">
+        <span id="lbl-scroll-container" class="btn-label"><span id="lbl-scroll-text">Auto-scroll:</span> <strong id="lbl-scroll-state">ON</strong></span>
+      </button>
+
+      <!-- Boton para ir hacia abajo de todo -->
+      <button id="btn-scroll-bottom" class="btn-control" title="Ir al final de la pagina" aria-label="Bajar al final">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <polyline points="19 12 12 19 5 12"></polyline>
+        </svg>
+      </button>
+
+      <!-- Ajuste de tamano de fuente de subtitulos -->
+      <div id="font-size-controls" class="font-size-controls" title="Ajustar tamano de subtitulos">
+        <button id="btn-font-dec" class="btn-icon-only" aria-label="Disminuir tamano de subtitulos">-</button>
+        <button id="btn-font-inc" class="btn-icon-only" aria-label="Aumentar tamano de subtitulos">+</button>
+      </div>
+
+      <!-- Alternar a Fullscreen -->
+      <button id="btn-mode-toggle" class="btn-control btn-highlight" title="Pantalla completa" aria-label="Fullscreen">
+        <span id="lbl-mode-toggle" class="btn-label">Fullscreen</span>
+      </button>
+
+      <!-- Selector de Idioma del Sitio (EN / ES / PT con icono V) -->
+      <div id="site-lang-container" class="site-lang-container" title="Idioma del sitio">
+        <div class="site-lang-wrapper">
+          <select id="select-site-lang" class="site-lang-select" aria-label="Idioma del sitio">
+            <option value="es" selected>ES</option>
+            <option value="en">EN</option>
+            <option value="pt">PT</option>
+          </select>
+          <svg class="site-lang-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Boton de Administracion y Control Room (Solo icono de tuerca) -->
+      <button id="btn-admin-settings" class="btn-control btn-icon-ctrl" title="Admin Settings" aria-label="Admin Settings">
+        <svg class="icon-gear" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Controles flotantes en Modo Fullscreen (a la izquierda: Home y Tema) -->
+  <div id="fullscreen-controls" class="fullscreen-controls">
+    <button id="btn-fullscreen-home" class="btn-control btn-icon-ctrl" title="Volver al inicio" aria-label="Volver">
+      <svg class="icon-home" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+      </svg>
+    </button>
+    <button id="btn-fullscreen-theme" class="btn-control btn-icon-ctrl" title="Alternar entre modo claro y oscuro" aria-label="Alternar tema">
+      <svg class="theme-icon icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line>
+        <line x1="21" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+      </svg>
+    </button>
+    <div id="fullscreen-font-controls" class="font-size-controls fullscreen-font-controls" title="Ajustar tamaño de subtítulos">
+      <button id="btn-fullscreen-font-dec" class="btn-icon-only" aria-label="Disminuir tamaño de subtítulos">-</button>
+      <button id="btn-fullscreen-font-inc" class="btn-icon-only" aria-label="Aumentar tamaño de subtítulos">+</button>
+    </div>
+  </div>
+
+  <!-- Contenedor Principal de Subtitulos -->
+  <main id="subtitles-container" class="subtitles-container">
+    <!-- Mensaje de estado inicial cuando no hay subtitulos -->
+    <div id="empty-state" class="empty-state">
+      <div class="empty-spinner"></div>
+      <p id="empty-title" class="empty-title">Esperando subtitulos de la transmision...</p>
+      <p id="empty-subtitle" class="empty-subtitle">Las frases apareceran aqui en tiempo real segun el par de idiomas seleccionado.</p>
+    </div>
+
+    <!-- Lista dinamica de subtitulos -->
+    <div id="subtitles-list" class="subtitles-list"></div>
+  </main>
+
+  <!-- Boton flotante para reanudar auto-scroll si el usuario subio manualmente -->
+  <button id="btn-resume-scroll" class="btn-resume-scroll hidden" aria-label="Bajar a los subtitulos mas recientes">
+    <span id="lbl-resume-scroll">Nuevos subtitulos</span>
+  </button>
+
+  <!-- Modal de Autenticacion para Admin Settings / Control Room -->
+  <div id="auth-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lbl-auth-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="lbl-auth-title" class="modal-title">Acceso Administrativo</h3>
+        <button type="button" id="btn-auth-close" class="modal-close-btn" aria-label="Cerrar">&times;</button>
+      </div>
+      <form id="auth-form" class="modal-form">
+        <div class="modal-field">
+          <label id="lbl-auth-key" for="auth-key-input" class="modal-label">Access Key</label>
+          <input type="password" id="auth-key-input" class="modal-input" placeholder="••••" autocomplete="current-password" required />
+        </div>
+        <div id="auth-error-msg" class="modal-error hidden"></div>
+        <div class="modal-actions">
+          <button type="button" id="btn-auth-cancel" class="btn-control">Cancelar</button>
+          <button type="submit" id="btn-auth-submit" class="btn-control btn-highlight">Ingresar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notificacion Toast para feedback de acciones -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Scripts -->
+  <script src="/static/app.js?v=20260920_5"></script>
+</body>
+</html>

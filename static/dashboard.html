@@ -1,0 +1,3432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control Room | Subtitulos en Vivo</title>
+  <script src="/static/vendor/chart.umd.min.js"></script>
+  <script>
+    if (typeof Chart === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>');
+    }
+  </script>
+  <style>
+    :root {
+      --bg-dark: #000000;
+      --bg-surface: #0a0a0a;
+      --bg-card: #0a0a0a;
+      --bg-card-hover: #121212;
+      --border-color: #262626;
+      --border-hover: #404040;
+      
+      --text-primary: #ffffff;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+
+      /* Tipografia Monocromatica / Monospace */
+      --font-ui: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --font-subtitles: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --transition-smooth: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body.gate-locked .app-wrapper {
+      filter: blur(8px);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .app-wrapper {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      width: 100%;
+      transition: filter 0.2s ease;
+    }
+
+    /* Header de Control Room */
+    header.dashboard-header {
+      background: var(--bg-dark);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.9rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 1rem;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* Circulo rojo parpadeante estilo EN VIVO */
+    .live-dot-red {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background-color: #ef4444;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.9);
+      animation: pulse-red 1.6s infinite ease-in-out;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse-red {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.9);
+      }
+      50% {
+        opacity: 0.35;
+        transform: scale(0.85);
+        box-shadow: 0 0 2px rgba(239, 68, 68, 0.3);
+      }
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+      line-height: 1;
+      margin: 0;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      font-family: var(--font-ui);
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      text-decoration: none;
+      transition: var(--transition-smooth);
+    }
+
+    .btn:hover:not(:disabled) {
+      background-color: var(--bg-card-hover);
+      border-color: var(--border-hover);
+      color: var(--text-primary);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .btn-icon-ctrl {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-highlight {
+      background-color: var(--text-primary);
+      color: var(--bg-dark) !important;
+      border-color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .btn-highlight:hover:not(:disabled) {
+      opacity: 0.88;
+      background-color: var(--text-primary);
+      border-color: var(--text-primary);
+      color: var(--bg-dark) !important;
+    }
+
+    /* Icono Refrescar */
+    .icon-refresh {
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .icon-refresh.spinning {
+      transform: rotate(360deg);
+    }
+
+    /* Selector de Idioma del Sitio (ES / EN / PT) */
+    .site-lang-container {
+      display: flex;
+      align-items: center;
+    }
+
+    .site-lang-wrapper {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .site-lang-select {
+      font-family: var(--font-ui);
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 0.35rem 1.6rem 0.35rem 0.65rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      transition: var(--transition-smooth);
+    }
+
+    .site-lang-select:hover,
+    .site-lang-select:focus {
+      background-color: var(--bg-card-hover);
+      border-color: var(--border-hover);
+    }
+
+    .site-lang-arrow {
+      position: absolute;
+      right: 0.5rem;
+      pointer-events: none;
+      stroke: var(--text-muted);
+    }
+
+    /* Contenido Principal */
+    main.dashboard-container {
+      flex: 1;
+      padding: clamp(1rem, 2vw, 2rem);
+      max-width: 1600px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .dashboard-section {
+      margin-bottom: 2.2rem;
+    }
+
+    .toolbar-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.75rem;
+      gap: 1rem;
+    }
+
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-primary);
+    }
+
+    .btn-add-session {
+      font-weight: 600;
+    }
+
+    /* =========================================================================
+       Power BI Slicer Dropdown Component
+       ========================================================================= */
+    .slicer-dropdown-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    .btn-slicer-toggle {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.35rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: var(--font-ui);
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: var(--transition-smooth);
+    }
+
+    .btn-slicer-toggle:hover {
+      border-color: var(--border-hover);
+      background-color: var(--bg-card-hover);
+    }
+
+    .dropdown-chevron {
+      transition: transform 0.15s ease;
+    }
+
+    .btn-slicer-toggle[aria-expanded="true"] .dropdown-chevron {
+      transform: rotate(180deg);
+    }
+
+    .slicer-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      min-width: 240px;
+      max-width: 320px;
+      background: #0d0d10;
+      border: 1px solid var(--border-hover);
+      border-radius: 4px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.75);
+      z-index: 150;
+      padding: 0.4rem 0;
+      animation: modal-fade-in 0.12s ease-out;
+    }
+
+    .slicer-dropdown-menu.hidden {
+      display: none !important;
+    }
+
+    .slicer-dropdown-select-all {
+      padding: 0.35rem 0.8rem;
+    }
+
+    .slicer-dropdown-divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 0.3rem 0;
+    }
+
+    .slicer-dropdown-list {
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 0.2rem 0;
+    }
+
+    .slicer-chk-item {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.35rem 0.8rem;
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.1s ease, color 0.1s ease;
+    }
+
+    .slicer-chk-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+    }
+
+    .slicer-chk-item input[type="checkbox"] {
+      cursor: pointer;
+      accent-color: var(--text-primary);
+    }
+
+    .slicer-empty-text {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-style: italic;
+      display: block;
+    }
+
+    /* =========================================================================
+       Dashboard de Métricas (Power BI KPI Cards Compactas)
+       ========================================================================= */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.35fr;
+      gap: 0.65rem;
+      margin-bottom: 1.25rem;
+    }
+
+    @media (max-width: 960px) {
+      .kpi-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+      .kpi-card-wide {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .kpi-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 0.35rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .kpi-card:hover {
+      border-color: var(--border-hover);
+      background-color: var(--bg-card-hover);
+    }
+
+    .kpi-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .kpi-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .kpi-value {
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+    }
+
+    /* Card Alargada SSE Stream */
+    .kpi-card-wide .kpi-sse-body {
+      display: flex;
+      align-items: center;
+      margin: 0;
+    }
+
+    .kpi-sse-text {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .kpi-sse-title {
+      color: var(--text-secondary);
+    }
+
+    .kpi-sse-status {
+      color: var(--text-primary);
+      text-transform: uppercase;
+    }
+
+    /* =========================================================================
+       Sección Analytics (Power BI Style: Líneas Arriba, Barras y Donuts Abajo)
+       ========================================================================= */
+    .analytics-section-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 1.35rem;
+      margin-bottom: 2rem;
+      width: 100%;
+    }
+
+    .analytics-row-top {
+      width: 100%;
+    }
+
+    .analytics-row-bottom {
+      display: grid;
+      grid-template-columns: 1.2fr clamp(190px, 18vw, 250px) clamp(190px, 18vw, 250px);
+      gap: 1rem;
+      align-items: stretch;
+      width: 100%;
+    }
+
+    @media (max-width: 1200px) {
+      .analytics-row-bottom {
+        grid-template-columns: 1fr 1fr;
+      }
+      .analytics-row-bottom .chart-card:first-child {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .analytics-row-bottom {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-card {
+      background-color: transparent;
+      border: none;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      width: 100%;
+    }
+
+    .chart-card-donut {
+      background-color: transparent;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 0.85rem 0.65rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      transition: border-color 0.15s ease;
+    }
+
+    .chart-card-donut:hover {
+      border-color: var(--border-hover);
+    }
+
+    .chart-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .chart-header-donut {
+      justify-content: center;
+      width: 100%;
+      text-align: center;
+    }
+
+    .chart-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .chart-title-main {
+      font-size: 1.15rem;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      margin: 0;
+    }
+
+    .chart-title-donut {
+      font-size: 0.95rem;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      margin: 0;
+      text-align: center;
+    }
+
+    .chart-badges {
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .chart-legend-pill {
+      font-size: 0.62rem;
+      font-weight: 600;
+      padding: 0.18rem 0.45rem;
+      border-radius: 3px;
+      font-family: var(--font-ui);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      letter-spacing: 0.02em;
+    }
+
+    .chart-legend-pill.pill-total {
+      border: 1px solid #00f0ff;
+      color: #00f0ff;
+      background: rgba(0, 240, 255, 0.08);
+    }
+
+    .chart-legend-pill.pill-asr {
+      border: 1px solid #ff9500;
+      color: #ff9500;
+      background: rgba(255, 149, 0, 0.08);
+    }
+
+    .chart-legend-pill.pill-trans {
+      border: 1px solid #f43f5e;
+      color: #f43f5e;
+      background: rgba(244, 63, 94, 0.08);
+    }
+
+    /* Contenedor del Canvas con el patrón de puntos dobles "::" */
+    .chart-canvas-wrap {
+      position: relative;
+      width: 100%;
+      height: 200px;
+    }
+
+    .chart-canvas-wrap.donut-wrap {
+      height: 180px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Contenedor del Canvas de gráficos de líneas y barras */
+    .chart-dot-pattern {
+      background-color: var(--bg-dark);
+      border-radius: 4px;
+      border: none;
+      padding: 0.25rem 0.35rem;
+    }
+
+    /* =========================================================================
+       Grid de Salas / Sesiones
+       ========================================================================= */
+    .rooms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 640px) {
+      .rooms-grid {
+        grid-template-columns: 1fr;
+      }
+      header.dashboard-header {
+        padding: 0.8rem 1rem;
+      }
+    }
+
+    /* Tarjeta de Sala (Compacta) */
+    .room-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: visible;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+      position: relative;
+    }
+
+    .room-card:hover {
+      border-color: var(--border-hover);
+      background-color: var(--bg-card-hover);
+    }
+
+    .room-card.state-live {
+      border-top: 2px solid var(--text-primary);
+    }
+
+    .room-card.state-silent {
+      border-top: 2px solid #ef4444;
+      animation: alert-border 2s infinite ease-in-out;
+    }
+
+    .room-card.state-idle,
+    .room-card.state-closed {
+      opacity: 0.88;
+      border-top: 2px solid var(--border-color);
+    }
+
+    @keyframes alert-border {
+      0%, 100% { border-top-color: #ef4444; }
+      50% { border-top-color: var(--border-color); }
+    }
+
+    .card-header {
+      padding: 0.75rem 1.1rem;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .room-identity {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      min-width: 0;
+    }
+
+    .room-id-tag {
+      color: var(--text-primary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+      padding: 0.18rem 0.45rem;
+      border-radius: 3px;
+      background: transparent;
+      white-space: nowrap;
+    }
+
+    .room-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .badge-stream {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.28rem;
+      color: #f87171;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 0.12rem 0.4rem;
+      border-radius: 3px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .badge-stream::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 6px #ef4444;
+    }
+
+    .header-right-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-shrink: 0;
+    }
+
+    .status-pill {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      padding: 0.18rem 0.5rem;
+      border-radius: 3px;
+      border: 1px solid var(--border-color);
+      background: transparent;
+      white-space: nowrap;
+    }
+
+    .pill-live {
+      color: var(--text-primary);
+      border-color: var(--text-primary);
+    }
+
+    .pill-silent {
+      color: #ef4444;
+      border-color: #ef4444;
+    }
+
+    .pill-idle,
+    .pill-closed {
+      color: var(--text-muted);
+      border-color: var(--border-color);
+    }
+
+    /* Botón de Pausa / Reanudar en el encabezado de sala */
+    .btn-pause {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.25rem 0.35rem;
+      border-radius: 3px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-smooth);
+    }
+
+    .btn-pause:hover {
+      background-color: rgba(234, 179, 8, 0.12);
+      border-color: #eab308;
+      color: #eab308;
+    }
+
+    .btn-pause.is-paused:hover {
+      background-color: rgba(34, 197, 94, 0.12);
+      border-color: #22c55e;
+      color: #22c55e;
+    }
+
+    /* Boton de Trash en el encabezado de sala */
+    .btn-trash {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.25rem 0.35rem;
+      border-radius: 3px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-smooth);
+    }
+
+    .btn-trash:hover {
+      background-color: rgba(239, 68, 68, 0.1);
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+
+    .card-body {
+      padding: 0.95rem 1.1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      flex: 1;
+    }
+
+    /* Metricas en fila de cada sesion */
+    .metrics-bar {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+      border: 1px solid var(--border-color);
+      padding: 0.65rem 0.5rem;
+      border-radius: 4px;
+      background: transparent;
+    }
+
+    .metric-item {
+      position: relative;
+      text-align: center;
+      padding: 0.15rem 0.2rem;
+    }
+
+    .metric-info-btn {
+      position: absolute;
+      top: -3px;
+      right: 1px;
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface);
+      color: var(--text-muted);
+      font-size: 9px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: help;
+      line-height: 1;
+      transition: var(--transition-smooth);
+    }
+
+    .metric-info-btn:hover {
+      border-color: var(--text-primary);
+      color: var(--text-primary);
+    }
+
+    /* Tooltip estilo Power BI */
+    .metric-tooltip {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      bottom: calc(100% + 7px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: 190px;
+      background-color: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75);
+      padding: 0.5rem 0.65rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      line-height: 1.35;
+      text-align: left;
+      z-index: 120;
+      pointer-events: none;
+      transition: opacity 0.15s ease, visibility 0.15s ease;
+      font-family: var(--font-ui);
+      font-weight: 400;
+    }
+
+    .metric-info-btn:hover .metric-tooltip,
+    .kpi-info-icon:hover .metric-tooltip {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .metric-value {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .metric-value.highlight {
+      color: var(--text-primary);
+    }
+
+    .metric-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-top: 0.15rem;
+    }
+
+    /* Alerta de silencio audiovisual */
+    .silence-banner {
+      border: 1px solid #ef4444;
+      color: #ef4444;
+      padding: 0.4rem 0.65rem;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      background: transparent;
+    }
+
+    /* Fila de Lenguaje Original y Groq RPM */
+    .session-info-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      padding-top: 0.15rem;
+    }
+
+    .session-info-footer strong {
+      color: var(--text-primary);
+    }
+
+    /* Barra de Acciones */
+    .card-actions {
+      padding: 0.65rem 1.1rem;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      background: transparent;
+      position: relative;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .btn-sm {
+      padding: 0.28rem 0.6rem;
+      font-size: 0.72rem;
+      border-radius: 3px;
+    }
+
+    .btn-danger {
+      color: var(--text-muted);
+      border-color: var(--border-color);
+    }
+
+    .btn-danger:hover {
+      background-color: #ef4444;
+      border-color: #ef4444;
+      color: #ffffff !important;
+    }
+
+    /* Dropdown de Descarga Minimalista */
+    .dropdown-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      bottom: calc(100% + 5px);
+      left: 0;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75);
+      z-index: 50;
+      min-width: 120px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modal-fade-in 0.15s ease-out;
+    }
+
+    .dropdown-menu.hidden {
+      display: none !important;
+    }
+
+    .dropdown-item {
+      padding: 0.45rem 0.8rem;
+      font-size: 0.75rem;
+      font-family: var(--font-ui);
+      color: var(--text-primary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: background-color 0.12s ease;
+    }
+
+    .dropdown-item:hover {
+      background-color: var(--bg-card-hover);
+      color: var(--text-primary);
+    }
+
+    .dropdown-arrow-icon {
+      margin-left: 0.2rem;
+      transition: transform 0.15s ease;
+    }
+
+    .dropdown-open .dropdown-arrow-icon {
+      transform: rotate(180deg);
+    }
+
+    /* Modales Minimalistas */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-overlay.hidden {
+      display: none !important;
+    }
+
+    .modal-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      width: 90%;
+      max-width: 440px;
+      padding: 1.6rem;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
+      animation: modal-fade-in 0.2s ease-out;
+    }
+
+    @keyframes modal-fade-in {
+      from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0 0.25rem;
+      transition: var(--transition-smooth);
+    }
+
+    .modal-close-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .modal-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .modal-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .modal-row-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .modal-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .modal-input {
+      font-family: var(--font-ui);
+      background-color: var(--bg-dark);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.88rem;
+      outline: none;
+      transition: var(--transition-smooth);
+    }
+
+    .modal-input:focus {
+      border-color: var(--text-primary);
+    }
+
+    .modal-help {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .modal-error {
+      font-size: 0.82rem;
+      color: #ef4444;
+    }
+
+    .modal-error.hidden {
+      display: none !important;
+    }
+
+    .modal-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Estado Vacio */
+    .empty-sessions-box {
+      grid-column: 1 / -1;
+      padding: 3.5rem 1.5rem;
+      text-align: center;
+      border: 1px dashed var(--border-color);
+      border-radius: 6px;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .empty-sessions-box p {
+      font-size: 0.85rem;
+      max-width: 420px;
+      line-height: 1.4;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      padding: 0.65rem 1.15rem;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
+      z-index: 2000;
+      transition: opacity 0.2s ease;
+    }
+
+    .toast.hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body class="gate-locked">
+
+  <div class="app-wrapper">
+    <!-- Header del Dashboard (Monocromatico Oscuro Puro) -->
+    <header class="dashboard-header">
+      <div class="brand-section">
+        <span class="live-dot-red" title="En Vivo" aria-label="En Vivo"></span>
+        <h1 class="brand-title">CONTROL ROOM</h1>
+      </div>
+
+      <div class="header-actions">
+        <!-- Selector de Idioma del Sitio (ES / EN / PT) -->
+        <div class="site-lang-container" title="Idioma del sitio">
+          <div class="site-lang-wrapper">
+            <select id="select-site-lang" class="site-lang-select" aria-label="Idioma del sitio">
+              <option value="es" selected>ES</option>
+              <option value="en">EN</option>
+              <option value="pt">PT</option>
+            </select>
+            <svg class="site-lang-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Modo Lector -->
+        <a href="/" class="btn" target="_blank" title="Abrir Modo Lector Web">
+          <span id="lbl-reader-mode">Modo Lector</span>
+        </a>
+
+        <!-- Boton Refrescar clasico con icono de flecha circular -->
+        <button id="btn-refresh" class="btn btn-icon-ctrl" title="Refrescar datos manualmente" aria-label="Refrescar">
+          <svg class="icon-refresh" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main class="dashboard-container">
+      <!-- ===================================================================
+           SECCION 1: METRICAS (Estilo Power BI Report)
+           =================================================================== -->
+      <section class="dashboard-section" id="section-metrics">
+        <div class="toolbar-section">
+          <h2 id="lbl-metrics-title" class="section-title">METRICAS</h2>
+          <!-- Slicer Dropdown super compacto estilo Power BI -->
+          <div class="slicer-dropdown-wrapper" id="slicer-dropdown-wrapper">
+            <button type="button" id="btn-slicer-toggle" class="btn btn-slicer-toggle" aria-expanded="false" title="Filtrar sesiones">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+              <span id="lbl-slicer-button-text">Sesiones (Todas)</span>
+              <svg class="dropdown-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div id="slicer-dropdown-menu" class="slicer-dropdown-menu hidden">
+              <div class="slicer-dropdown-select-all">
+                <label class="slicer-chk-item">
+                  <input type="checkbox" id="chk-slicer-select-all" checked />
+                  <span id="lbl-slicer-select-all">Seleccionar todas</span>
+                </label>
+              </div>
+              <div class="slicer-dropdown-divider"></div>
+              <div id="slicer-items-list" class="slicer-dropdown-list">
+                <!-- Checkboxes de salas generados dinamicamente -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grid de KPI Cards (Compactas sin subtitulos ni tooltips) -->
+        <div class="kpi-grid">
+          <!-- Card 1: Espectadores -->
+          <div class="kpi-card">
+            <div class="kpi-card-header">
+              <span class="kpi-label" id="lbl-kpi-viewers">ESPECTADORES</span>
+            </div>
+            <div class="kpi-value" id="kpi-total-viewers">0</div>
+          </div>
+
+          <!-- Card 2: Sesiones -->
+          <div class="kpi-card">
+            <div class="kpi-card-header">
+              <span class="kpi-label" id="lbl-kpi-rooms">SESIONES</span>
+            </div>
+            <div class="kpi-value" id="kpi-total-rooms">0</div>
+          </div>
+
+          <!-- Card 3: SSE Stream (Sin punto parpadeante ni subtitulo) -->
+          <div class="kpi-card kpi-card-wide">
+            <div class="kpi-card-header">
+              <span class="kpi-label" id="lbl-kpi-sse">Telemetría de Red</span>
+            </div>
+            <div class="kpi-sse-body">
+              <div class="kpi-sse-text">
+                <span class="kpi-sse-title" id="lbl-kpi-sse-title">SSE STREAM:</span>
+                <strong id="kpi-sse-status" class="kpi-sse-status">CONECTADO</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           SECCION 1.5: ANALYTICS & TELEMETRIA GRAFICA (Power BI Style)
+           =================================================================== -->
+      <section class="dashboard-section" id="section-analytics">
+        <div class="analytics-section-layout">
+          <!-- Fila Superior: Telemetría de Latencia a todo lo ancho -->
+          <div class="analytics-row-top">
+            <div class="chart-card chart-card-main">
+              <div class="chart-card-header">
+                <div class="chart-title-group">
+                  <h3 class="chart-title-main" id="lbl-chart-latency-title">TELEMETRÍA DE LATENCIA (MS)</h3>
+                </div>
+                <div class="chart-badges">
+                  <span class="chart-legend-pill pill-total" id="lbl-pill-total">Latencia Total</span>
+                  <span class="chart-legend-pill pill-asr" id="lbl-pill-asr">ASR Groq</span>
+                  <span class="chart-legend-pill pill-trans" id="lbl-pill-trans">Traducción</span>
+                </div>
+              </div>
+              <div class="chart-canvas-wrap chart-dot-pattern">
+                <canvas id="chart-latency"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fila Inferior Alineada: Consumo de Audio (compacto) -> Donut 1 -> Donut 2 -->
+          <div class="analytics-row-bottom">
+            <!-- 1. Gráfico de Barras: Consumo de Audio por Sesión -->
+            <div class="chart-card chart-card-main">
+              <div class="chart-card-header">
+                <div class="chart-title-group">
+                  <h3 class="chart-title-main" id="lbl-chart-usage-title">CONSUMO DE AUDIO POR SESIÓN</h3>
+                </div>
+              </div>
+              <div class="chart-canvas-wrap chart-dot-pattern">
+                <canvas id="chart-usage"></canvas>
+              </div>
+            </div>
+
+            <!-- 2. Donut 1: Idiomas de Transmisión -->
+            <div class="chart-card chart-card-donut">
+              <div class="chart-card-header chart-header-donut">
+                <h3 class="chart-title-donut" id="lbl-chart-source-title">IDIOMAS DE TRANSMISIÓN</h3>
+              </div>
+              <div class="chart-canvas-wrap donut-wrap">
+                <canvas id="chart-source-lang"></canvas>
+              </div>
+            </div>
+
+            <!-- 3. Donut 2: Traducciones Más Usadas -->
+            <div class="chart-card chart-card-donut">
+              <div class="chart-card-header chart-header-donut">
+                <h3 class="chart-title-donut" id="lbl-chart-target-title">TRADUCCIONES MÁS USADAS</h3>
+              </div>
+              <div class="chart-canvas-wrap donut-wrap">
+                <canvas id="chart-target-lang"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================================================================
+           SECCION 2: SESIONES
+           =================================================================== -->
+      <section class="dashboard-section" id="section-sessions">
+        <div class="toolbar-section">
+          <h2 id="lbl-sessions-title" class="section-title">SESIONES</h2>
+          <button id="btn-add-session" class="btn btn-add-session" title="Dar de alta una nueva transmisión">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span id="lbl-btn-add-session">Agregar transmisión</span>
+          </button>
+        </div>
+
+        <!-- Grilla de Tarjetas de Salas -->
+        <div id="rooms-grid" class="rooms-grid">
+          <!-- Generado dinamicamente -->
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal Gate de Acceso Administrativo (Proteccion de URL /controlroom) -->
+  <div id="modal-gate" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="lbl-gate-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="lbl-gate-title" class="modal-title">Acceso Administrativo</h3>
+      </div>
+      <form id="form-gate" class="modal-form">
+        <div class="modal-field">
+          <label id="lbl-gate-key" for="input-gate-key" class="modal-label">Access Key</label>
+          <input type="password" id="input-gate-key" class="modal-input" placeholder="••••" autocomplete="current-password" required autofocus />
+        </div>
+        <div id="gate-error-msg" class="modal-error hidden">Access Key incorrecta</div>
+        <div class="modal-actions">
+          <button type="button" id="btn-gate-cancel" class="btn">Cancelar</button>
+          <button type="submit" id="btn-gate-submit" class="btn btn-highlight">Ingresar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Interactivo: Agregar Transmision -->
+  <div id="modal-add-session" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lbl-modal-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="lbl-modal-title" class="modal-title">Agregar Transmisión</h3>
+        <button type="button" id="btn-modal-close" class="modal-close-btn" aria-label="Cerrar">&times;</button>
+      </div>
+      <form id="form-add-session" class="modal-form">
+        <div class="modal-field">
+          <label id="lbl-modal-id" for="input-session-id" class="modal-label">ID de Sesión / Sala</label>
+          <input type="text" id="input-session-id" class="modal-input" placeholder="ej: stage-1, conferencia-2" required autocomplete="off" />
+          <span class="modal-help" id="lbl-modal-id-help">Solo letras, números y guiones (sin espacios).</span>
+        </div>
+        <div class="modal-field">
+          <label id="lbl-modal-session-title" for="input-session-title" class="modal-label">Título descriptivo (opcional)</label>
+          <input type="text" id="input-session-title" class="modal-input" placeholder="ej: Auditorio Principal" autocomplete="off" />
+        </div>
+        <div class="modal-field">
+          <label id="lbl-modal-stream-url" for="input-stream-url" class="modal-label">URL DEL STREAM/VIDEO</label>
+          <input type="url" id="input-stream-url" class="modal-input" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" />
+        </div>
+        <div class="modal-field">
+          <label id="lbl-modal-source-lang" for="select-source-lang" class="modal-label">Idioma Audio (Origen)</label>
+          <select id="select-source-lang" class="modal-input">
+            <option value="es" selected>Español (ES)</option>
+            <option value="en">English (EN)</option>
+            <option value="pt">Português (PT)</option>
+          </select>
+        </div>
+        <div id="modal-error-msg" class="modal-error hidden"></div>
+        <div class="modal-actions">
+          <button type="button" id="btn-modal-cancel" class="btn">Cancelar</button>
+          <button type="submit" id="btn-modal-submit" class="btn btn-highlight">Crear Transmisión</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // -----------------------------------------------------------------------
+      // Diccionario Internacionalizacion (i18n) - ES / EN / PT
+      // -----------------------------------------------------------------------
+      const I18N = {
+        es: {
+          siteTitle: 'Control Room | Subtitulos en Vivo',
+          brandTitle: 'CONTROL ROOM',
+          metricsTitle: 'METRICAS',
+          slicerTitle: 'Filtrar por transmisión:',
+          slicerSelectAll: 'Seleccionar todas',
+          slicerButtonAll: 'Sesiones (Todas)',
+          slicerButtonCount: 'Sesiones ({count})',
+          slicerButtonNone: 'Ninguna sesión',
+          kpiViewers: 'ESPECTADORES',
+          kpiRooms: 'SESIONES',
+          kpiSse: 'Telemetría de Red',
+          sseConnected: 'CONECTADO',
+          sseReconnecting: 'RECONECTANDO...',
+          readerMode: 'Modo Lector',
+          readerTitle: 'Abrir Modo Lector Web',
+          refreshTitle: 'Refrescar datos manualmente',
+          siteLangTitle: 'Idioma del sitio',
+          sessionsTitle: 'SESIONES',
+          btnAddSession: 'Agregar transmisión',
+          btnAddSessionTitle: 'Dar de alta una nueva transmisión',
+          emptySessions: 'No hay sesiones registradas. Haz clic en "Agregar transmisión" para dar de alta una nueva sala.',
+          noSlicerSessions: 'Sin transmisiones disponibles',
+          // Gate
+          gateTitle: 'Acceso Administrativo',
+          gateKeyLabel: 'Access Key',
+          gateCancel: 'Cancelar',
+          gateSubmit: 'Ingresar',
+          gateError: 'Access Key incorrecta',
+          // Modal
+          modalTitle: 'Agregar Transmisión',
+          modalIdLabel: 'ID de Sesión / Sala',
+          modalIdPlaceholder: 'ej: stage-1, conferencia-2',
+          modalIdHelp: 'Solo letras, números y guiones (sin espacios).',
+          modalTitleLabel: 'Título descriptivo (opcional)',
+          modalTitlePlaceholder: 'ej: Auditorio Principal',
+          modalSourceLangLabel: 'Idioma Audio',
+          modalTargetLangLabel: 'Idioma Subtítulos',
+          modalStreamUrlLabel: 'URL DEL STREAM/VIDEO',
+          modalStreamUrlPlaceholder: 'https://www.youtube.com/watch?v=...',
+          modalCancel: 'Cancelar',
+          modalSubmit: 'Crear Transmisión',
+          modalErrRequired: 'El ID de sesión es obligatorio.',
+          modalErrInvalid: 'El ID solo puede contener letras, números y guiones.',
+          modalSuccessCreated: 'Transmisión creada con éxito.',
+          // Cards
+          pillActive: 'Activa',
+          pillInactive: 'Inactiva',
+          silenceAlert: 'ALERTA: No se detecta audio hace mas de 15 segundos en este canal.',
+          latencyLabel: 'Latencia',
+          asrLabel: 'ASR Groq',
+          transLabel: 'Traducción',
+          viewersCardLabel: 'Viewers',
+          origLangLabel: 'Lenguaje original:',
+          rpmLabel: 'Groq RPM:',
+          btnDownload: 'Descargar',
+          downloadTooltip: 'Descargar transcripción en formatos estándar',
+          downloadDisabledTooltip: 'Solo disponible al finalizar la sesión (Inactiva)',
+          btnObsLink: 'OBS Link',
+          btnObsTitle: 'Copiar URL para OBS Browser Source',
+          btnOpenReader: 'Abrir Lector',
+          btnOpenReaderTitle: 'Abrir pantalla de subtitulos para espectadores',
+          btnEndSession: 'Finalizar',
+          btnEndSessionTitle: 'Pausar y dejar la transmisión en estado Inactiva',
+          btnPauseTitle: 'Pausar sesión (pasar a Inactiva)',
+          btnResumeTitle: 'Reanudar sesión (pasar a Activa)',
+          btnDeleteTitle: 'Eliminar permanentemente esta transmisión',
+          confirmEnd: 'Deseas finalizar la sesión "{id}" y pasarla a estado Inactiva?',
+          confirmDelete: '¿Deseas eliminar permanentemente la sesión "{id}" y todos sus registros?',
+          toastSessionClosed: 'Sesión "{id}" marcada como Inactiva.',
+          toastSessionResumed: 'Sesión "{id}" reactivada con éxito.',
+          toastSessionDeleted: 'Sesión "{id}" eliminada con éxito.',
+          toastObsCopied: 'Enlace OBS copiado para sala {id}',
+          // Tooltips estilo Power BI
+          tooltipLatency: 'Tiempo total de procesamiento de extremo a extremo: captura, transcripción de voz, traducción y difusión WebSockets.',
+          tooltipAsr: 'Tiempo que tarda el modelo Whisper en la infraestructura Groq en transcribir el fragmento de audio a texto.',
+          tooltipTrans: 'Tiempo empleado por el modelo LLM en traducir el texto transcrito al idioma objetivo.',
+          tooltipViewers: 'Cantidad de espectadores y fuentes de navegador (OBS) conectados actualmente a esta sesión.',
+          tipKpiViewers: 'Suma en vivo de espectadores y clientes OBS conectados a las transmisiones seleccionadas.',
+          tipKpiRooms: 'Cantidad de salas y transmisiones incluidas en el filtro actual.',
+          tipKpiSse: 'Canal Server-Sent Events (SSE) push que transmite métricas con latencia cero sin recargas continuas.',
+          // Analytics & Graficos
+          chartLatencyTitle: 'TELEMETRÍA DE LATENCIA (MS)',
+          chartLatencySub: 'Evolución temporal de inferencia y red',
+          chartUsageTitle: 'CONSUMO DE AUDIO POR SESIÓN',
+          chartUsageSub: 'Minutos acumulados procesados (Agnóstico a modelo)',
+          chartSourceTitle: 'IDIOMAS DE TRANSMISIÓN',
+          chartSourceSub: 'Distribución de audio de origen detectado',
+          chartTargetTitle: 'TRADUCCIONES MÁS USADAS',
+          chartTargetSub: 'Demanda de lectura en vivo por espectadores',
+          pillTotal: 'Latencia Total',
+          pillAsr: 'ASR Groq',
+          pillTrans: 'Traducción',
+          chartAvgLabel: 'Promedio ({n} salas)',
+          chartMinutesLabel: 'Minutos de audio:',
+          chartChunksLabel: 'Peticiones / Bloques:',
+          chartStatusLabel: 'Estado:',
+          chartAudienceLabel: 'espectadores'
+        },
+        en: {
+          siteTitle: 'Control Room | Live Subtitles',
+          brandTitle: 'CONTROL ROOM',
+          metricsTitle: 'METRICS',
+          slicerTitle: 'Filter by transmission:',
+          slicerSelectAll: 'Select all',
+          slicerButtonAll: 'Sessions (All)',
+          slicerButtonCount: 'Sessions ({count})',
+          slicerButtonNone: 'No sessions',
+          kpiViewers: 'VIEWERS',
+          kpiRooms: 'SESSIONS',
+          kpiSse: 'Network Telemetry',
+          sseConnected: 'CONNECTED',
+          sseReconnecting: 'RECONNECTING...',
+          readerMode: 'Reader Mode',
+          readerTitle: 'Open Web Reader Mode',
+          refreshTitle: 'Refresh data manually',
+          siteLangTitle: 'Site language',
+          sessionsTitle: 'SESSIONS',
+          btnAddSession: 'Add Stream',
+          btnAddSessionTitle: 'Register a new stream',
+          emptySessions: 'No active sessions found. Click "Add Stream" to create one.',
+          noSlicerSessions: 'No transmissions available',
+          // Gate
+          gateTitle: 'Admin Access',
+          gateKeyLabel: 'Access Key',
+          gateCancel: 'Cancel',
+          gateSubmit: 'Enter',
+          gateError: 'Access Key incorrecta',
+          // Modal
+          modalTitle: 'Add New Stream',
+          modalIdLabel: 'Session / Room ID',
+          modalIdPlaceholder: 'e.g. stage-1, conference-2',
+          modalIdHelp: 'Letters, numbers, and dashes only (no spaces).',
+          modalTitleLabel: 'Descriptive title (optional)',
+          modalTitlePlaceholder: 'e.g. Main Auditorium',
+          modalSourceLangLabel: 'Audio Language',
+          modalTargetLangLabel: 'Subtitles Language',
+          modalStreamUrlLabel: 'STREAM/VIDEO URL',
+          modalStreamUrlPlaceholder: 'https://www.youtube.com/watch?v=...',
+          modalCancel: 'Cancel',
+          modalSubmit: 'Create Stream',
+          modalErrRequired: 'Session ID is required.',
+          modalErrInvalid: 'ID can only contain letters, numbers, and dashes.',
+          modalSuccessCreated: 'Stream created successfully.',
+          // Cards
+          pillActive: 'Active',
+          pillInactive: 'Inactive',
+          silenceAlert: 'ALERT: No audio detected for more than 15 seconds on this channel.',
+          latencyLabel: 'Latency',
+          asrLabel: 'ASR Groq',
+          transLabel: 'Translation',
+          viewersCardLabel: 'Viewers',
+          origLangLabel: 'Original language:',
+          rpmLabel: 'Groq RPM:',
+          btnDownload: 'Download',
+          downloadTooltip: 'Download transcription in standard formats',
+          downloadDisabledTooltip: 'Only available once session is Inactive',
+          btnObsLink: 'OBS Link',
+          btnObsTitle: 'Copy URL for OBS Browser Source',
+          btnOpenReader: 'Open Reader',
+          btnOpenReaderTitle: 'Open subtitle view for audience',
+          btnEndSession: 'End',
+          btnEndSessionTitle: 'End session and switch to Inactive',
+          btnPauseTitle: 'Pause session (switch to Inactive)',
+          btnResumeTitle: 'Resume session (switch to Active)',
+          btnDeleteTitle: 'Permanently delete this stream',
+          confirmEnd: 'Do you want to end session "{id}" and mark it as Inactive?',
+          confirmDelete: 'Do you want to permanently delete session "{id}" and all its logs?',
+          toastSessionClosed: 'Session "{id}" set to Inactive.',
+          toastSessionResumed: 'Session "{id}" resumed successfully.',
+          toastSessionDeleted: 'Session "{id}" deleted successfully.',
+          toastObsCopied: 'OBS link copied for room {id}',
+          // Tooltips
+          tooltipLatency: 'Total end-to-end processing latency: audio capture, speech transcription, translation, and WebSocket delivery.',
+          tooltipAsr: 'Inference time taken by the Whisper model on Groq hardware to convert audio into text.',
+          tooltipTrans: 'Time taken by the LLM translation model to translate transcribed text to target language.',
+          tooltipViewers: 'Number of viewers and browser sources (OBS) currently connected to this session.',
+          tipKpiViewers: 'Live sum of viewers and OBS clients connected to currently selected transmissions.',
+          tipKpiRooms: 'Number of transmissions and rooms included in the active filter.',
+          tipKpiSse: 'Server-Sent Events (SSE) push channel delivering telemetry with zero latency without continuous page polling.',
+          // Analytics & Charts
+          chartLatencyTitle: 'LATENCY TELEMETRY (MS)',
+          chartLatencySub: 'Inference and network time series',
+          chartUsageTitle: 'AUDIO USAGE PER SESSION',
+          chartUsageSub: 'Accumulated processed minutes (Model agnostic)',
+          chartSourceTitle: 'BROADCAST LANGUAGES',
+          chartSourceSub: 'Distribution of detected source audio',
+          chartTargetTitle: 'TOP USED TRANSLATIONS',
+          chartTargetSub: 'Live audience reading demand',
+          pillTotal: 'Total Latency',
+          pillAsr: 'Groq ASR',
+          pillTrans: 'Translation',
+          chartAvgLabel: 'Average ({n} rooms)',
+          chartMinutesLabel: 'Audio minutes:',
+          chartChunksLabel: 'Requests / Chunks:',
+          chartStatusLabel: 'Status:',
+          chartAudienceLabel: 'viewers'
+        },
+        pt: {
+          siteTitle: 'Control Room | Legendas ao Vivo',
+          brandTitle: 'CONTROL ROOM',
+          metricsTitle: 'METRICAS',
+          slicerTitle: 'Filtrar por transmissão:',
+          slicerSelectAll: 'Selecionar todas',
+          slicerButtonAll: 'Sessões (Todas)',
+          slicerButtonCount: 'Sessões ({count})',
+          slicerButtonNone: 'Nenhuma sessão',
+          kpiViewers: 'ESPECTADORES',
+          kpiRooms: 'SESSÕES',
+          kpiSse: 'Telemetria de Rede',
+          sseConnected: 'CONECTADO',
+          sseReconnecting: 'RECONECTANDO...',
+          readerMode: 'Modo Leitor',
+          readerTitle: 'Abrir Modo Leitor Web',
+          refreshTitle: 'Atualizar dados manualmente',
+          siteLangTitle: 'Idioma do site',
+          sessionsTitle: 'SESSOES',
+          btnAddSession: 'Adicionar Transmissão',
+          btnAddSessionTitle: 'Cadastrar uma nova transmissão',
+          emptySessions: 'Nenhuma sessão encontrada. Clique em "Adicionar Transmissão" para criar uma sala.',
+          noSlicerSessions: 'Nenhuma transmissão disponível',
+          // Gate
+          gateTitle: 'Acesso Administrativo',
+          gateKeyLabel: 'Access Key',
+          gateCancel: 'Cancelar',
+          gateSubmit: 'Entrar',
+          gateError: 'Access Key incorrecta',
+          // Modal
+          modalTitle: 'Adicionar Nova Transmissão',
+          modalIdLabel: 'ID da Sessão / Sala',
+          modalIdPlaceholder: 'ex: stage-1, conferencia-2',
+          modalIdHelp: 'Apenas letras, números e hífens (sem espaços).',
+          modalTitleLabel: 'Título descritivo (opcional)',
+          modalTitlePlaceholder: 'ex: Auditório Principal',
+          modalSourceLangLabel: 'Idioma do Áudio',
+          modalTargetLangLabel: 'Idioma das Legendas',
+          modalStreamUrlLabel: 'URL DA TRANSMISSÃO/VÍDEO',
+          modalStreamUrlPlaceholder: 'https://www.youtube.com/watch?v=...',
+          modalCancel: 'Cancelar',
+          modalSubmit: 'Criar Transmissão',
+          modalErrRequired: 'O ID da sessão é obrigatório.',
+          modalErrInvalid: 'O ID pode conter apenas letras, números e hífens.',
+          modalSuccessCreated: 'Transmissão criada com sucesso.',
+          // Cards
+          pillActive: 'Ativa',
+          pillInactive: 'Inativa',
+          silenceAlert: 'ALERTA: Nenhum áudio detectado há mais de 15 segundos neste canal.',
+          latencyLabel: 'Latência',
+          asrLabel: 'ASR Groq',
+          transLabel: 'Tradução',
+          viewersCardLabel: 'Viewers',
+          origLangLabel: 'Língua original:',
+          rpmLabel: 'Groq RPM:',
+          btnDownload: 'Baixar',
+          downloadTooltip: 'Baixar transcrição em formatos padrão',
+          downloadDisabledTooltip: 'Disponível apenas ao finalizar a sessão (Inativa)',
+          btnObsLink: 'OBS Link',
+          btnObsTitle: 'Copiar URL para OBS Browser Source',
+          btnOpenReader: 'Abrir Leitor',
+          btnOpenReaderTitle: 'Abrir visualização de legendas para o público',
+          btnEndSession: 'Finalizar',
+          btnEndSessionTitle: 'Finalizar e alterar estado para Inativa',
+          btnDeleteTitle: 'Excluir permanentemente esta transmissão',
+          confirmEnd: 'Deseja finalizar a sessão "{id}" e colocá-la como Inativa?',
+          confirmDelete: 'Deseja excluir permanentemente a sessão "{id}" e todos os seus registros?',
+          toastSessionClosed: 'Sessão "{id}" marcada como Inativa.',
+          toastSessionDeleted: 'Sessão "{id}" excluída com sucesso.',
+          toastObsCopied: 'Link OBS copiado para a sala {id}',
+          // Tooltips
+          tooltipLatency: 'Tempo total de processamento de ponta a ponta: captura, transcrição de voz, tradução e distribuição WebSockets.',
+          tooltipAsr: 'Tempo de inferência do modelo Whisper no hardware Groq para converter áudio em texto.',
+          tooltipTrans: 'Tempo que o modelo LLM leva para traduzir o texto transcrito para o idioma de destino.',
+          tooltipViewers: 'Número de espectadores e fontes de navegador (OBS) conectados a esta sessão.',
+          tipKpiViewers: 'Soma em tempo real de espectadores e clientes OBS conectados às transmissões selecionadas.',
+          tipKpiRooms: 'Quantidade de transmissões e salas incluídas no filtro ativo.',
+          tipKpiSse: 'Canal Server-Sent Events (SSE) push que fornece métricas sem latência sem sobrecarregar o servidor.',
+          // Analytics & Charts
+          chartLatencyTitle: 'TELEMETRIA DE LATÊNCIA (MS)',
+          chartLatencySub: 'Evolução temporal de inferência e rede',
+          chartUsageTitle: 'CONSUMO DE ÁUDIO POR SESSÃO',
+          chartUsageSub: 'Minutos acumulados processados (Agnóstico ao modelo)',
+          chartSourceTitle: 'IDIOMAS DE TRANSMISSÃO',
+          chartSourceSub: 'Distribuição do áudio de origem detectado',
+          chartTargetTitle: 'TRADUÇÕES MAIS USADAS',
+          chartTargetSub: 'Demanda de leitura ao vivo pelos espectadores',
+          pillTotal: 'Latência Total',
+          pillAsr: 'ASR Groq',
+          pillTrans: 'Tradução',
+          chartAvgLabel: 'Média ({n} salas)',
+          chartMinutesLabel: 'Minutos de áudio:',
+          chartChunksLabel: 'Requisições / Blocos:',
+          chartStatusLabel: 'Estado:',
+          chartAudienceLabel: 'espectadores'
+        }
+      };
+
+      let currentSiteLang = localStorage.getItem('subtitles_site_lang') || 'es';
+      let lastKnownSessions = [];
+      let selectedSessionIds = new Set();
+      let hasInitializedSlicer = false;
+
+      const elements = {
+        body: document.body,
+        grid: document.getElementById('rooms-grid'),
+        selectSiteLang: document.getElementById('select-site-lang'),
+        lblReaderMode: document.getElementById('lbl-reader-mode'),
+        btnRefresh: document.getElementById('btn-refresh'),
+        toast: document.getElementById('toast'),
+        // Sección Métricas Power BI
+        lblMetricsTitle: document.getElementById('lbl-metrics-title'),
+        lblSlicerTitle: document.getElementById('lbl-slicer-title'),
+        btnSlicerToggle: document.getElementById('btn-slicer-toggle'),
+        lblSlicerButtonText: document.getElementById('lbl-slicer-button-text'),
+        slicerDropdownMenu: document.getElementById('slicer-dropdown-menu'),
+        chkSlicerSelectAll: document.getElementById('chk-slicer-select-all'),
+        lblSlicerSelectAll: document.getElementById('lbl-slicer-select-all'),
+        slicerItemsList: document.getElementById('slicer-items-list'),
+        kpiTotalViewers: document.getElementById('kpi-total-viewers'),
+        lblKpiViewers: document.getElementById('lbl-kpi-viewers'),
+        kpiTotalRooms: document.getElementById('kpi-total-rooms'),
+        lblKpiRooms: document.getElementById('lbl-kpi-rooms'),
+        kpiSseStatus: document.getElementById('kpi-sse-status'),
+        lblKpiSse: document.getElementById('lbl-kpi-sse'),
+        lblKpiSseTitle: document.getElementById('lbl-kpi-sse-title'),
+        // Sección Analytics & Gráficos
+        lblChartLatencyTitle: document.getElementById('lbl-chart-latency-title'),
+        lblPillTotal: document.getElementById('lbl-pill-total'),
+        lblPillAsr: document.getElementById('lbl-pill-asr'),
+        lblPillTrans: document.getElementById('lbl-pill-trans'),
+        lblChartUsageTitle: document.getElementById('lbl-chart-usage-title'),
+        lblChartSourceTitle: document.getElementById('lbl-chart-source-title'),
+        lblChartTargetTitle: document.getElementById('lbl-chart-target-title'),
+        canvasLatency: document.getElementById('chart-latency'),
+        canvasUsage: document.getElementById('chart-usage'),
+        canvasSourceLang: document.getElementById('chart-source-lang'),
+        canvasTargetLang: document.getElementById('chart-target-lang'),
+        // Sección Sesiones
+        lblSessionsTitle: document.getElementById('lbl-sessions-title'),
+        btnAddSession: document.getElementById('btn-add-session'),
+        lblBtnAddSession: document.getElementById('lbl-btn-add-session'),
+        // Gate Modal
+        modalGate: document.getElementById('modal-gate'),
+        formGate: document.getElementById('form-gate'),
+        inputGateKey: document.getElementById('input-gate-key'),
+        gateErrorMsg: document.getElementById('gate-error-msg'),
+        btnGateCancel: document.getElementById('btn-gate-cancel'),
+        lblGateTitle: document.getElementById('lbl-gate-title'),
+        lblGateKey: document.getElementById('lbl-gate-key'),
+        btnGateSubmit: document.getElementById('btn-gate-submit'),
+        // Add Session Modal
+        modalAddSession: document.getElementById('modal-add-session'),
+        lblModalTitle: document.getElementById('lbl-modal-title'),
+        btnModalClose: document.getElementById('btn-modal-close'),
+        btnModalCancel: document.getElementById('btn-modal-cancel'),
+        formAddSession: document.getElementById('form-add-session'),
+        inputSessionId: document.getElementById('input-session-id'),
+        inputSessionTitle: document.getElementById('input-session-title'),
+        selectSourceLang: document.getElementById('select-source-lang'),
+        selectTargetLang: document.getElementById('select-target-lang'),
+        inputStreamUrl: document.getElementById('input-stream-url'),
+        lblModalId: document.getElementById('lbl-modal-id'),
+        lblModalIdHelp: document.getElementById('lbl-modal-id-help'),
+        lblModalSessionTitle: document.getElementById('lbl-modal-session-title'),
+        lblModalSourceLang: document.getElementById('lbl-modal-source-lang'),
+        lblModalTargetLang: document.getElementById('lbl-modal-target-lang'),
+        lblModalStreamUrl: document.getElementById('lbl-modal-stream-url'),
+        btnModalSubmit: document.getElementById('btn-modal-submit'),
+        modalErrorMsg: document.getElementById('modal-error-msg')
+      };
+
+      let eventSource = null;
+      let fallbackTimer = null;
+
+      // -----------------------------------------------------------------------
+      // Autenticación de Acceso Administrativo (Gate)
+      // -----------------------------------------------------------------------
+      function checkAuth() {
+        const isAuth = sessionStorage.getItem('control_room_authorized') === 'true';
+        if (isAuth) {
+          unlockGate();
+        } else {
+          lockGate();
+        }
+      }
+
+      function lockGate() {
+        elements.body.classList.add('gate-locked');
+        elements.modalGate.classList.remove('hidden');
+        if (elements.inputGateKey) {
+          elements.inputGateKey.value = '';
+          setTimeout(() => elements.inputGateKey.focus(), 60);
+        }
+      }
+
+      function unlockGate() {
+        elements.body.classList.remove('gate-locked');
+        elements.modalGate.classList.add('hidden');
+        fetchTelemetry();
+        initSSE();
+      }
+
+      function handleGateSubmit(e) {
+        e.preventDefault();
+        const t = I18N[currentSiteLang] || I18N.es;
+        const key = (elements.inputGateKey ? elements.inputGateKey.value : '').trim();
+
+        if (key === '1234') {
+          elements.gateErrorMsg.classList.add('hidden');
+          sessionStorage.setItem('control_room_authorized', 'true');
+          unlockGate();
+        } else {
+          elements.gateErrorMsg.textContent = t.gateError;
+          elements.gateErrorMsg.classList.remove('hidden');
+          elements.inputGateKey.value = '';
+          elements.inputGateKey.focus();
+        }
+      }
+
+      function handleGateCancel() {
+        window.location.href = '/';
+      }
+
+      // -----------------------------------------------------------------------
+      // Gestion de Idioma del Sitio (ES / EN / PT)
+      // -----------------------------------------------------------------------
+      function setSiteLanguage(lang) {
+        if (!I18N[lang]) lang = 'es';
+        currentSiteLang = lang;
+        localStorage.setItem('subtitles_site_lang', lang);
+        if (elements.selectSiteLang) {
+          elements.selectSiteLang.value = lang;
+        }
+
+        const t = I18N[lang];
+        document.title = t.siteTitle;
+
+        if (elements.lblMetricsTitle) elements.lblMetricsTitle.textContent = t.metricsTitle;
+        if (elements.lblSlicerTitle) elements.lblSlicerTitle.textContent = t.slicerTitle;
+        if (elements.lblSlicerSelectAll) elements.lblSlicerSelectAll.textContent = t.slicerSelectAll;
+        if (elements.lblKpiViewers) elements.lblKpiViewers.textContent = t.kpiViewers;
+        if (elements.lblKpiRooms) elements.lblKpiRooms.textContent = t.kpiRooms;
+        if (elements.lblKpiSse) elements.lblKpiSse.textContent = t.kpiSse;
+
+        // Traducir estado de SSE Stream dinámicamente según conexión
+        if (elements.kpiSseStatus) {
+          const isConnected = eventSource && eventSource.readyState === EventSource.OPEN;
+          elements.kpiSseStatus.textContent = isConnected ? t.sseConnected : t.sseReconnecting;
+        }
+
+        if (elements.lblSessionsTitle) elements.lblSessionsTitle.textContent = t.sessionsTitle;
+        if (elements.lblBtnAddSession) elements.lblBtnAddSession.textContent = t.btnAddSession;
+        if (elements.btnAddSession) elements.btnAddSession.title = t.btnAddSessionTitle;
+        if (elements.lblReaderMode) elements.lblReaderMode.textContent = t.readerMode;
+        if (elements.btnRefresh) elements.btnRefresh.title = t.refreshTitle;
+
+        // Gate labels
+        if (elements.lblGateTitle) elements.lblGateTitle.textContent = t.gateTitle;
+        if (elements.lblGateKey) elements.lblGateKey.textContent = t.gateKeyLabel;
+        if (elements.btnGateCancel) elements.btnGateCancel.textContent = t.gateCancel;
+        if (elements.btnGateSubmit) elements.btnGateSubmit.textContent = t.gateSubmit;
+
+        // Modal labels
+        if (elements.lblModalTitle) elements.lblModalTitle.textContent = t.modalTitle;
+        if (elements.lblModalId) elements.lblModalId.textContent = t.modalIdLabel;
+        if (elements.inputSessionId) elements.inputSessionId.placeholder = t.modalIdPlaceholder;
+        if (elements.lblModalIdHelp) elements.lblModalIdHelp.textContent = t.modalIdHelp;
+        if (elements.lblModalSessionTitle) elements.lblModalSessionTitle.textContent = t.modalTitleLabel;
+        if (elements.inputSessionTitle) elements.inputSessionTitle.placeholder = t.modalTitlePlaceholder;
+        if (elements.lblModalSourceLang) elements.lblModalSourceLang.textContent = t.modalSourceLangLabel;
+        if (elements.lblModalTargetLang) elements.lblModalTargetLang.textContent = t.modalTargetLangLabel;
+        if (elements.lblModalStreamUrl && t.modalStreamUrlLabel) elements.lblModalStreamUrl.textContent = t.modalStreamUrlLabel;
+        if (elements.inputStreamUrl && t.modalStreamUrlPlaceholder) elements.inputStreamUrl.placeholder = t.modalStreamUrlPlaceholder;
+        // Analytics labels
+        if (elements.lblChartLatencyTitle) elements.lblChartLatencyTitle.textContent = t.chartLatencyTitle;
+        if (elements.lblPillTotal) elements.lblPillTotal.textContent = t.pillTotal;
+        if (elements.lblPillAsr) elements.lblPillAsr.textContent = t.pillAsr;
+        if (elements.lblPillTrans) elements.lblPillTrans.textContent = t.pillTrans;
+        if (elements.lblChartUsageTitle) elements.lblChartUsageTitle.textContent = t.chartUsageTitle;
+        if (elements.lblChartSourceTitle) elements.lblChartSourceTitle.textContent = t.chartSourceTitle;
+        if (elements.lblChartTargetTitle) elements.lblChartTargetTitle.textContent = t.chartTargetTitle;
+
+        renderSlicer();
+        updateSlicerButtonLabel();
+        updateKpiMetrics();
+        updateAnalyticsCharts(lastKnownSessions);
+        renderSessions(lastKnownSessions);
+      }
+
+      function showToast(msg) {
+        if (!elements.toast) return;
+        elements.toast.textContent = msg;
+        elements.toast.classList.remove('hidden');
+        setTimeout(() => {
+          elements.toast.classList.add('hidden');
+        }, 3200);
+      }
+
+      function copyText(text, successMsg) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => showToast(successMsg));
+        } else {
+          prompt('Copia este enlace:', text);
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // Motor Gráfico de Analíticas (Power BI Dark Style con Chart.js)
+      // -----------------------------------------------------------------------
+      const VIBRANT_PALETTE = [
+        '#00f0ff', // Electric Cyan
+        '#ff9500', // Vibrant Orange / Amber
+        '#818cf8', // Bright Indigo
+        '#f43f5e', // Hot Pink / Magenta
+        '#10b981', // Vivid Emerald
+        '#facc15', // Bright Yellow
+        '#a855f7', // Vivid Purple
+        '#06b6d4', // Bright Teal
+        '#ec4899', // Bright Rose
+        '#3b82f6'  // Neon Blue
+      ];
+
+      let chartLatencyInstance = null;
+      let chartUsageInstance = null;
+      let chartSourceInstance = null;
+      let chartTargetInstance = null;
+
+      const MAX_LATENCY_POINTS = 20;
+      let latencyHistory = []; // { timeLabel, showLabel, tot, asr, trans, breakdown: [] }
+      let lastLatencyTickTime = 0;
+
+      function initAnalyticsCharts() {
+        if (typeof Chart === 'undefined') return;
+
+        // Configuración visual dark mode de Chart.js
+        Chart.defaults.color = '#71717a';
+        Chart.defaults.font.family = 'ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace';
+        Chart.defaults.font.size = 10;
+
+        // 1. Gráfico de Líneas: Latencias en Tiempo Real
+        if (elements.canvasLatency) {
+          const ctxLat = elements.canvasLatency.getContext('2d');
+          chartLatencyInstance = new Chart(ctxLat, {
+            type: 'line',
+            data: {
+              labels: [],
+              datasets: [
+                {
+                  label: 'Latencia Total',
+                  data: [],
+                  borderColor: '#00f0ff',
+                  backgroundColor: 'rgba(0, 240, 255, 0.07)',
+                  borderWidth: 2,
+                  fill: true,
+                  tension: 0.35,
+                  pointRadius: 2.5,
+                  pointHoverRadius: 5,
+                  pointBackgroundColor: '#00f0ff',
+                  pointBorderColor: '#000000',
+                  pointBorderWidth: 1
+                },
+                {
+                  label: 'ASR Groq',
+                  data: [],
+                  borderColor: '#ff9500',
+                  backgroundColor: 'transparent',
+                  borderWidth: 1.8,
+                  borderDash: [4, 3],
+                  fill: false,
+                  tension: 0.35,
+                  pointRadius: 2.5,
+                  pointHoverRadius: 5,
+                  pointBackgroundColor: '#ff9500',
+                  pointBorderColor: '#000000',
+                  pointBorderWidth: 1
+                },
+                {
+                  label: 'Traducción',
+                  data: [],
+                  borderColor: '#f43f5e',
+                  backgroundColor: 'transparent',
+                  borderWidth: 1.8,
+                  fill: false,
+                  tension: 0.35,
+                  pointRadius: 2.5,
+                  pointHoverRadius: 5,
+                  pointBackgroundColor: '#f43f5e',
+                  pointBorderColor: '#000000',
+                  pointBorderWidth: 1
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: { duration: 350 },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: '#121216',
+                  borderColor: '#2d2d35',
+                  borderWidth: 1,
+                  padding: 10,
+                  cornerRadius: 4,
+                  titleColor: '#ffffff',
+                  bodyColor: '#e4e4e7',
+                  titleFont: { family: 'ui-monospace, monospace', size: 11, weight: 'bold' },
+                  bodyFont: { family: 'ui-monospace, monospace', size: 10 },
+                  displayColors: true,
+                  callbacks: {
+                    title: function (context) {
+                      if (!context || !context.length) return '';
+                      const idx = context[0].dataIndex;
+                      const entry = latencyHistory[idx];
+                      return entry ? entry.timeLabel : '';
+                    },
+                    label: function (ctx) {
+                      return ` ${ctx.dataset.label}: ${ctx.parsed.y} ms`;
+                    },
+                    afterBody: function (context) {
+                      if (!context || !context.length) return '';
+                      const idx = context[0].dataIndex;
+                      const entry = latencyHistory[idx];
+                      if (!entry || !entry.breakdown || entry.breakdown.length <= 1) return '';
+                      const t = I18N[currentSiteLang] || I18N.es;
+                      let lines = ['\n' + (currentSiteLang === 'en' ? 'Breakdown by room:' : (currentSiteLang === 'pt' ? 'Detalhamento por sala:' : 'Desglose por sala:'))];
+                      entry.breakdown.forEach(b => {
+                        lines.push(`• ${b.title || b.id}: ${b.tot}ms (ASR: ${b.asr}ms | Trans: ${b.trans}ms)`);
+                      });
+                      return lines.join('\n');
+                    }
+                  }
+                }
+              },
+              layout: {
+                padding: {
+                  left: 10,
+                  right: 14,
+                  bottom: 4
+                }
+              },
+              scales: {
+                x: {
+                  position: 'bottom',
+                  grid: {
+                    display: false,
+                    drawOnChartArea: false,
+                    drawTicks: false
+                  },
+                  ticks: {
+                    color: '#a1a1aa',
+                    font: { size: 10.5, family: 'ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace' },
+                    align: 'inner',
+                    padding: 8,
+                    minRotation: 0,
+                    maxRotation: 0,
+                    autoSkip: false,
+                    callback: function (val, index) {
+                      const entry = latencyHistory[index];
+                      return (entry && entry.showLabel) ? entry.timeLabel : '';
+                    }
+                  }
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: {
+                    color: 'rgba(255, 255, 255, 0.08)',
+                    lineWidth: 1.8,
+                    borderDash: [2, 4]
+                  },
+                  ticks: {
+                    color: '#71717a',
+                    font: { size: 9.5 },
+                    padding: 22,
+                    callback: function (val) { return val + 'ms'; }
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        // 2. Gráfico de Barras: Consumo por Sesión (Agnóstico a modelo)
+        if (elements.canvasUsage) {
+          const ctxUsage = elements.canvasUsage.getContext('2d');
+          chartUsageInstance = new Chart(ctxUsage, {
+            type: 'bar',
+            data: {
+              labels: [],
+              datasets: [{
+                data: [],
+                backgroundColor: [],
+                borderColor: [],
+                borderWidth: 1,
+                borderRadius: 4,
+                maxBarThickness: 36
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: { duration: 350 },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: '#121216',
+                  borderColor: '#2d2d35',
+                  borderWidth: 1,
+                  padding: 10,
+                  cornerRadius: 4,
+                  titleColor: '#ffffff',
+                  bodyColor: '#e4e4e7',
+                  titleFont: { family: 'ui-monospace, monospace', size: 11, weight: 'bold' },
+                  bodyFont: { family: 'ui-monospace, monospace', size: 10 },
+                  callbacks: {
+                    label: function (ctx) {
+                      const t = I18N[currentSiteLang] || I18N.es;
+                      const session = ctx.raw?._session;
+                      const mins = ctx.raw?.y ?? ctx.parsed.y;
+                      const chunks = session?.subtitles_count || session?.total_subtitles || 0;
+                      const statusLabel = session?.status === 'live' ? t.pillActive : t.pillInactive;
+                      return [
+                        ` ${t.chartMinutesLabel} ${mins} min`,
+                        ` ${t.chartChunksLabel} ${chunks}`,
+                        ` ${t.chartStatusLabel} ${statusLabel}`
+                      ];
+                    }
+                  }
+                }
+              },
+              layout: {
+                padding: {
+                  left: 10,
+                  right: 14
+                }
+              },
+              scales: {
+                x: {
+                  grid: {
+                    display: false,
+                    drawOnChartArea: false,
+                    drawTicks: false
+                  },
+                  ticks: {
+                    color: '#a1a1aa',
+                    font: { size: 9.5 },
+                    padding: 6
+                  }
+                },
+                y: {
+                  beginAtZero: true,
+                  grid: {
+                    color: 'rgba(255, 255, 255, 0.08)',
+                    lineWidth: 1.8,
+                    borderDash: [2, 4]
+                  },
+                  ticks: {
+                    color: '#71717a',
+                    font: { size: 9 },
+                    padding: 22,
+                    callback: function (val) { return val + ' min'; }
+                  }
+                }
+              }
+            }
+          });
+        }
+
+        // 3. Donut 1: Idiomas de Transmisión (Source Audio - Centro Vacío)
+        if (elements.canvasSourceLang) {
+          const ctxSrc = elements.canvasSourceLang.getContext('2d');
+          chartSourceInstance = new Chart(ctxSrc, {
+            type: 'doughnut',
+            data: {
+              labels: [],
+              datasets: [{
+                data: [],
+                backgroundColor: [],
+                borderColor: '#0a0a0a',
+                borderWidth: 2,
+                hoverOffset: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '72%',
+              animation: { duration: 350 },
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: {
+                    color: '#a1a1aa',
+                    font: { size: 10, family: 'ui-monospace, monospace', weight: 'bold' },
+                    boxWidth: 8,
+                    boxHeight: 8,
+                    padding: 6
+                  }
+                },
+                tooltip: {
+                  backgroundColor: '#121216',
+                  borderColor: '#2d2d35',
+                  borderWidth: 1,
+                  padding: 8,
+                  cornerRadius: 4,
+                  titleFont: { size: 10.5, weight: 'bold' },
+                  bodyFont: { size: 10 }
+                }
+              }
+            }
+          });
+        }
+
+        // 4. Donut 2: Traducciones Más Usadas (Audiencia Target - Centro Vacío)
+        if (elements.canvasTargetLang) {
+          const ctxTgt = elements.canvasTargetLang.getContext('2d');
+          chartTargetInstance = new Chart(ctxTgt, {
+            type: 'doughnut',
+            data: {
+              labels: [],
+              datasets: [{
+                data: [],
+                backgroundColor: [],
+                borderColor: '#0a0a0a',
+                borderWidth: 2,
+                hoverOffset: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '72%',
+              animation: { duration: 350 },
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: {
+                    color: '#a1a1aa',
+                    font: { size: 10, family: 'ui-monospace, monospace', weight: 'bold' },
+                    boxWidth: 8,
+                    boxHeight: 8,
+                    padding: 6
+                  }
+                },
+                tooltip: {
+                  backgroundColor: '#121216',
+                  borderColor: '#2d2d35',
+                  borderWidth: 1,
+                  padding: 8,
+                  cornerRadius: 4,
+                  titleFont: { size: 10.5, weight: 'bold' },
+                  bodyFont: { size: 10 },
+                  callbacks: {
+                    label: function (ctx) {
+                      const t = I18N[currentSiteLang] || I18N.es;
+                      return ` ${ctx.label}: ${ctx.parsed} ${t.chartAudienceLabel}`;
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+      }
+
+      function updateAnalyticsCharts(sessions) {
+        if (!sessions || typeof Chart === 'undefined') return;
+        if (!chartLatencyInstance || !chartUsageInstance || !chartSourceInstance || !chartTargetInstance) {
+          initAnalyticsCharts();
+        }
+        if (!chartLatencyInstance) return;
+
+        // Filtrar sesiones según el Slicer activo
+        const filtered = sessions.filter(s => selectedSessionIds.has(s.session_id.toLowerCase().trim()));
+
+        // 1. Gráfico de Líneas (Telemetría de Latencia)
+        const nowMs = Date.now();
+        const nowLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const showLabel = (!lastLatencyTickTime || (nowMs - lastLatencyTickTime >= 4800));
+        if (showLabel) {
+          lastLatencyTickTime = nowMs;
+        }
+
+        let currentPoint = {
+          timeLabel: nowLabel,
+          showLabel: showLabel,
+          tot: 0,
+          asr: 0,
+          trans: 0,
+          breakdown: []
+        };
+
+        function getSessionMetrics(s) {
+          const isClosed = (s.status === 'closed');
+          const isSilent = (s.status === 'silent');
+          const isStale = (Date.now() / 1000 - (s.last_activity || 0)) > 15;
+          if (isClosed || isSilent || isStale) {
+            return { tot: 0, asr: 0, trans: 0 };
+          }
+          return {
+            tot: Math.round(s.metrics?.latency_ms || 0),
+            asr: Math.round(s.metrics?.asr_ms || 0),
+            trans: Math.round(s.metrics?.trans_ms || 0)
+          };
+        }
+
+        const activeFiltered = filtered.filter(s => s.status !== 'closed');
+
+        if (activeFiltered.length === 1) {
+          const s = activeFiltered[0];
+          const m = getSessionMetrics(s);
+          currentPoint.tot = m.tot;
+          currentPoint.asr = m.asr;
+          currentPoint.trans = m.trans;
+          currentPoint.breakdown = [{
+            id: s.session_id,
+            title: s.title || ('Sala ' + s.session_id),
+            tot: m.tot,
+            asr: m.asr,
+            trans: m.trans
+          }];
+        } else if (activeFiltered.length > 1) {
+          let sumTot = 0, sumAsr = 0, sumTrans = 0;
+          currentPoint.breakdown = activeFiltered.map(s => {
+            const m = getSessionMetrics(s);
+            sumTot += m.tot;
+            sumAsr += m.asr;
+            sumTrans += m.trans;
+            return {
+              id: s.session_id,
+              title: s.title || ('Sala ' + s.session_id),
+              tot: m.tot, asr: m.asr, trans: m.trans
+            };
+          });
+          currentPoint.tot = Math.round(sumTot / activeFiltered.length);
+          currentPoint.asr = Math.round(sumAsr / activeFiltered.length);
+          currentPoint.trans = Math.round(sumTrans / activeFiltered.length);
+        }
+
+        latencyHistory.push(currentPoint);
+        if (latencyHistory.length > MAX_LATENCY_POINTS) {
+          latencyHistory.shift();
+        }
+
+        chartLatencyInstance.data.labels = latencyHistory.map(h => h.timeLabel);
+        chartLatencyInstance.data.datasets[0].data = latencyHistory.map(h => h.tot);
+        chartLatencyInstance.data.datasets[1].data = latencyHistory.map(h => h.asr);
+        chartLatencyInstance.data.datasets[2].data = latencyHistory.map(h => h.trans);
+        chartLatencyInstance.update('none');
+
+        // 2. Gráfico de Barras (Consumo de Audio por Sesión - Solo transmisiones activas)
+        const targetList = (filtered.length > 0 ? filtered : sessions).filter(s => s.status !== 'closed');
+        const usageLabels = targetList.map(s => s.title || ('Sala ' + s.session_id));
+        const usageValues = targetList.map((s, idx) => {
+          const durSec = s.duration_seconds || ((s.subtitles_count || s.total_subtitles || 0) * 3);
+          const mins = Number((durSec / 60).toFixed(2));
+          return {
+            x: s.title || ('Sala ' + s.session_id),
+            y: mins,
+            _session: s
+          };
+        });
+        const usageColors = targetList.map((s, idx) => VIBRANT_PALETTE[idx % VIBRANT_PALETTE.length]);
+        const usageSig = usageLabels.length === 0 ? 'empty' : (usageLabels.join(',') + ':' + usageValues.map(v => v.y).join(','));
+        if (chartUsageInstance._lastSig !== usageSig) {
+          chartUsageInstance.data.labels = usageLabels;
+          chartUsageInstance.data.datasets[0].data = usageValues;
+          chartUsageInstance.data.datasets[0].backgroundColor = usageColors.map(c => c + 'cc');
+          chartUsageInstance.data.datasets[0].borderColor = usageColors;
+          chartUsageInstance.update('none');
+          chartUsageInstance._lastSig = usageSig;
+        }
+
+        // Helper para abreviar idioma a código limpio (ES, EN, PT). Devuelve null si no está definido para no forzar ningún idioma
+        function formatLangCode(lang) {
+          if (!lang) return null;
+          const c = lang.trim().toUpperCase();
+          if (c === 'ALL' || c === 'AL' || c === 'AUTO' || c === 'NONE' || c === '' || c === 'UNDEFINED' || c === 'NULL') {
+            return null;
+          }
+          if (c.startsWith('ES') || c === 'SPANISH') return 'ES';
+          if (c.startsWith('EN') || c === 'ENGLISH') return 'EN';
+          if (c.startsWith('PT') || c === 'PORTUGUESE') return 'PT';
+          if (c.startsWith('FR') || c === 'FRENCH') return 'FR';
+          if (c.startsWith('DE') || c === 'GERMAN') return 'DE';
+          if (c.startsWith('IT') || c === 'ITALIAN') return 'IT';
+          return c.length === 2 ? c : null;
+        }
+
+        // Paleta exclusiva para idiomas en Donut Charts (SIN coincidencias con Cyan, Naranja ni Magenta de telemetría)
+        const DONUT_LANG_COLORS = {
+          'ES': '#a855f7', // Electric Violet / Púrpura
+          'EN': '#10b981', // Vivid Emerald Green / Verde Esmeralda
+          'PT': '#3b82f6', // Bright Royal Blue / Azul Rey
+          'FR': '#eab308', // Amber Gold / Amarillo Dorado
+          'DE': '#14b8a6', // Deep Teal / Verde Azulado
+          'IT': '#84cc16'  // Lime Green / Verde Lima
+        };
+        const DONUT_COLOR_FALLBACK = [
+          '#a855f7',
+          '#10b981',
+          '#3b82f6',
+          '#eab308',
+          '#14b8a6',
+          '#84cc16',
+          '#6366f1',
+          '#06b6d4'
+        ];
+
+        // 3. Donut 1: Idiomas de Transmisión (Source Audio - Solo sesiones activas con idioma configurado)
+        const srcCounts = {};
+        targetList.forEach(s => {
+          const l = formatLangCode(s.source_lang);
+          if (l) {
+            srcCounts[l] = (srcCounts[l] || 0) + 1;
+          }
+        });
+
+        const srcKeys = Object.keys(srcCounts);
+        const srcSig = srcKeys.length === 0 ? 'empty' : (srcKeys.join(',') + ':' + srcKeys.map(k => srcCounts[k]).join(','));
+        if (chartSourceInstance._lastSig !== srcSig) {
+          chartSourceInstance.data.labels = srcKeys;
+          chartSourceInstance.data.datasets[0].data = srcKeys.map(k => srcCounts[k]);
+          chartSourceInstance.data.datasets[0].backgroundColor = srcKeys.map((k, i) => DONUT_LANG_COLORS[k] || DONUT_COLOR_FALLBACK[i % DONUT_COLOR_FALLBACK.length]);
+          chartSourceInstance.update('none');
+          chartSourceInstance._lastSig = srcSig;
+        }
+
+        // 4. Donut 2: Traducciones Más Usadas (Audiencia Target - Solo sesiones activas con idioma configurado)
+        const tgtCounts = {};
+        let totalViewersInList = 0;
+        targetList.forEach(s => {
+          const l = formatLangCode(s.target_lang);
+          if (l) {
+            const v = s.viewers || 0;
+            totalViewersInList += v;
+            tgtCounts[l] = (tgtCounts[l] || 0) + (v > 0 ? v : 1);
+          }
+        });
+
+        const tgtKeys = Object.keys(tgtCounts);
+        const tgtSig = tgtKeys.length === 0 ? 'empty' : (tgtKeys.join(',') + ':' + tgtKeys.map(k => tgtCounts[k]).join(','));
+        if (chartTargetInstance._lastSig !== tgtSig) {
+          chartTargetInstance.data.labels = tgtKeys;
+          chartTargetInstance.data.datasets[0].data = tgtKeys.map(k => tgtCounts[k]);
+          chartTargetInstance.data.datasets[0].backgroundColor = tgtKeys.map((k, i) => DONUT_LANG_COLORS[k] || DONUT_COLOR_FALLBACK[i % DONUT_COLOR_FALLBACK.length]);
+          chartTargetInstance.update('none');
+          chartTargetInstance._lastSig = tgtSig;
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // Power BI Slicer y KPI Metrics Engine
+      // -----------------------------------------------------------------------
+      function updateSlicerButtonLabel() {
+        const t = I18N[currentSiteLang] || I18N.es;
+        if (!elements.lblSlicerButtonText) return;
+        if (!lastKnownSessions || lastKnownSessions.length === 0) {
+          const emptyText = t.noSlicerSessions || 'Sin sesiones';
+          if (elements.lblSlicerButtonText.textContent !== emptyText) {
+            elements.lblSlicerButtonText.textContent = emptyText;
+          }
+          return;
+        }
+        const total = lastKnownSessions.length;
+        const selected = selectedSessionIds.size;
+        let targetText = '';
+        if (selected === total) {
+          targetText = t.slicerButtonAll || 'Sesiones (Todas)';
+        } else if (selected === 0) {
+          targetText = t.slicerButtonNone || 'Ninguna sesión';
+        } else if (selected === 1) {
+          const firstId = Array.from(selectedSessionIds)[0];
+          const found = lastKnownSessions.find(s => s.session_id.toLowerCase().trim() === firstId);
+          targetText = found ? (found.title || found.session_id) : firstId;
+        } else {
+          targetText = (t.slicerButtonCount ? t.slicerButtonCount.replace('{count}', selected) : `${selected} sel.`);
+        }
+        if (elements.lblSlicerButtonText.textContent !== targetText) {
+          elements.lblSlicerButtonText.textContent = targetText;
+        }
+      }
+
+      function renderSlicer() {
+        const t = I18N[currentSiteLang] || I18N.es;
+        if (!elements.slicerItemsList) return;
+
+        if (!lastKnownSessions || lastKnownSessions.length === 0) {
+          elements.slicerItemsList.innerHTML = `<span class="slicer-empty-text" style="padding:0.4rem 0.8rem;display:block;font-size:0.75rem;color:var(--text-secondary);">${t.noSlicerSessions}</span>`;
+          selectedSessionIds.clear();
+          if (elements.chkSlicerSelectAll) elements.chkSlicerSelectAll.checked = false;
+          updateSlicerButtonLabel();
+          return;
+        }
+
+        // Si es primera vez, inicializar seleccionando todas
+        if (!hasInitializedSlicer) {
+          selectedSessionIds = new Set(lastKnownSessions.map(s => s.session_id.toLowerCase().trim()));
+          hasInitializedSlicer = true;
+        }
+
+        // Si se agregaron o eliminaron sesiones del sistema, sincronizar selección
+        if (!renderSlicer.knownSessionIds) {
+          renderSlicer.knownSessionIds = new Set();
+        }
+        let sessionIdsChanged = false;
+        const currentSessionIdsSet = new Set(lastKnownSessions.map(s => s.session_id.toLowerCase().trim()));
+        for (const sid of currentSessionIdsSet) {
+          if (!renderSlicer.knownSessionIds.has(sid)) {
+            selectedSessionIds.add(sid);
+            sessionIdsChanged = true;
+          }
+        }
+        for (const sid of renderSlicer.knownSessionIds) {
+          if (!currentSessionIdsSet.has(sid)) {
+            selectedSessionIds.delete(sid);
+            sessionIdsChanged = true;
+          }
+        }
+        renderSlicer.knownSessionIds = currentSessionIdsSet;
+
+        // Comparar firma estructural para no destruir el DOM de los checkboxes si no cambió nada
+        const currentSignature = lastKnownSessions.map(s => `${s.session_id}:${s.title || ''}`).sort().join('|') + `|${currentSiteLang}`;
+        if (!sessionIdsChanged && renderSlicer.lastSignature === currentSignature) {
+          // Solo sincronizar el estado checked de los checkboxes existentes sin tocar el DOM
+          elements.slicerItemsList.querySelectorAll('.slicer-chk-item input').forEach(input => {
+            const sid = input.value;
+            const shouldBeChecked = selectedSessionIds.has(sid);
+            if (input.checked !== shouldBeChecked) {
+              input.checked = shouldBeChecked;
+            }
+          });
+          if (elements.chkSlicerSelectAll) {
+            const shouldAll = (selectedSessionIds.size === lastKnownSessions.length && lastKnownSessions.length > 0);
+            if (elements.chkSlicerSelectAll.checked !== shouldAll) {
+              elements.chkSlicerSelectAll.checked = shouldAll;
+            }
+          }
+          updateSlicerButtonLabel();
+          return;
+        }
+
+        renderSlicer.lastSignature = currentSignature;
+        elements.slicerItemsList.innerHTML = '';
+
+        lastKnownSessions.forEach(session => {
+          const sid = session.session_id.toLowerCase().trim();
+          const isSelected = selectedSessionIds.has(sid);
+          const safeTitle = escapeHtml(session.title || ('Sala ' + sid));
+
+          const label = document.createElement('label');
+          label.className = 'slicer-chk-item';
+          label.innerHTML = `
+            <input type="checkbox" value="${escapeHtml(sid)}" ${isSelected ? 'checked' : ''} />
+            <span>${safeTitle}</span>
+          `;
+
+          const chk = label.querySelector('input');
+          chk.addEventListener('change', function () {
+            if (this.checked) {
+              selectedSessionIds.add(sid);
+            } else {
+              selectedSessionIds.delete(sid);
+            }
+
+            if (elements.chkSlicerSelectAll) {
+              elements.chkSlicerSelectAll.checked = (selectedSessionIds.size === lastKnownSessions.length);
+            }
+            updateSlicerButtonLabel();
+            updateKpiMetrics();
+            updateAnalyticsCharts(lastKnownSessions);
+            renderSessions(lastKnownSessions);
+          });
+
+          elements.slicerItemsList.appendChild(label);
+        });
+
+        if (elements.chkSlicerSelectAll) {
+          elements.chkSlicerSelectAll.checked = (selectedSessionIds.size === lastKnownSessions.length);
+        }
+        updateSlicerButtonLabel();
+      }
+
+      function updateKpiMetrics() {
+        if (!lastKnownSessions || lastKnownSessions.length === 0) {
+          if (elements.kpiTotalViewers && elements.kpiTotalViewers.textContent !== '0') elements.kpiTotalViewers.textContent = '0';
+          if (elements.kpiTotalRooms && elements.kpiTotalRooms.textContent !== '0') elements.kpiTotalRooms.textContent = '0';
+          return;
+        }
+
+        let totalViewers = 0;
+        let filteredCount = 0;
+
+        lastKnownSessions.forEach(session => {
+          const sid = session.session_id.toLowerCase().trim();
+          if (selectedSessionIds.has(sid)) {
+            totalViewers += (session.viewers || 0);
+            filteredCount++;
+          }
+        });
+
+        const viewersStr = String(totalViewers);
+        const roomsStr = String(filteredCount);
+        if (elements.kpiTotalViewers && elements.kpiTotalViewers.textContent !== viewersStr) elements.kpiTotalViewers.textContent = viewersStr;
+        if (elements.kpiTotalRooms && elements.kpiTotalRooms.textContent !== roomsStr) elements.kpiTotalRooms.textContent = roomsStr;
+      }
+
+      // Handler para checkbox "Seleccionar todas"
+      if (elements.chkSlicerSelectAll) {
+        elements.chkSlicerSelectAll.addEventListener('change', function () {
+          const checkAll = this.checked;
+          if (checkAll) {
+            selectedSessionIds = new Set(lastKnownSessions.map(s => s.session_id.toLowerCase().trim()));
+          } else {
+            selectedSessionIds.clear();
+          }
+
+          if (elements.slicerItemsList) {
+            elements.slicerItemsList.querySelectorAll('input[type="checkbox"]').forEach(input => {
+              input.checked = checkAll;
+            });
+          }
+
+          updateSlicerButtonLabel();
+          updateKpiMetrics();
+          updateAnalyticsCharts(lastKnownSessions);
+          renderSessions(lastKnownSessions);
+        });
+      }
+
+      // Dropdown toggle y click outside
+      if (elements.btnSlicerToggle && elements.slicerDropdownMenu) {
+        elements.btnSlicerToggle.addEventListener('click', function (e) {
+          e.stopPropagation();
+          const isHidden = elements.slicerDropdownMenu.classList.toggle('hidden');
+          elements.btnSlicerToggle.setAttribute('aria-expanded', !isHidden);
+        });
+
+        document.addEventListener('click', function (e) {
+          if (!elements.slicerDropdownMenu.classList.contains('hidden')) {
+            if (!elements.slicerDropdownMenu.contains(e.target) && !elements.btnSlicerToggle.contains(e.target)) {
+              elements.slicerDropdownMenu.classList.add('hidden');
+              elements.btnSlicerToggle.setAttribute('aria-expanded', 'false');
+            }
+          }
+        });
+      }
+
+      // -----------------------------------------------------------------------
+      // Renderizado de Tarjetas de Sesion (In-place DOM Reconciliation)
+      // -----------------------------------------------------------------------
+      function renderSessions(sessions) {
+        lastKnownSessions = sessions || [];
+        const t = I18N[currentSiteLang] || I18N.es;
+
+        if (!sessions || sessions.length === 0) {
+          elements.grid.innerHTML = `
+            <div class="empty-sessions-box">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              <p>${t.emptySessions}</p>
+            </div>
+          `;
+          updateKpiMetrics();
+          return;
+        }
+
+        // Filtrar sesiones según selección del slicer
+        const visibleSessions = sessions.filter(s => {
+          const sid = s.session_id.toLowerCase().trim();
+          return selectedSessionIds.size === 0 || selectedSessionIds.has(sid);
+        });
+
+        if (visibleSessions.length === 0) {
+          elements.grid.innerHTML = `
+            <div class="empty-sessions-box">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              <p>${t.emptySessions}</p>
+            </div>
+          `;
+          updateKpiMetrics();
+          return;
+        }
+
+        // Quitar caja de sesiones vacías si existe
+        const emptyBox = elements.grid.querySelector('.empty-sessions-box');
+        if (emptyBox) emptyBox.remove();
+
+        // Mapear tarjetas existentes por session_id
+        const existingCards = new Map();
+        elements.grid.querySelectorAll('.room-card[data-session-id]').forEach(card => {
+          const sid = card.getAttribute('data-session-id');
+          if (sid) existingCards.set(sid, card);
+        });
+
+        visibleSessions.forEach(session => {
+          const sid = session.session_id.toLowerCase().trim();
+          const existingCard = existingCards.get(sid);
+
+          if (existingCard) {
+            // Actualización in-place sin destruir ni mover el nodo en el DOM
+            updateExistingCard(existingCard, session, t);
+            existingCards.delete(sid);
+          } else {
+            // Crear nueva tarjeta
+            const newCard = createSessionCard(session, t);
+            elements.grid.appendChild(newCard);
+          }
+        });
+
+        // Eliminar tarjetas de sesiones que ya no están visibles
+        existingCards.forEach(card => card.remove());
+
+        // Reordenar SOLO si el orden actual en el DOM difiere de visibleSessions
+        // (Evita desasociar/re-asociar nodos que ya están en su lugar correcto)
+        const currentChildren = Array.from(elements.grid.children).filter(el => el.classList.contains('room-card'));
+        const needsReorder = visibleSessions.length !== currentChildren.length || visibleSessions.some((session, idx) => {
+          const sid = session.session_id.toLowerCase().trim();
+          const child = currentChildren[idx];
+          return !child || child.getAttribute('data-session-id') !== sid;
+        });
+
+        if (needsReorder) {
+          visibleSessions.forEach(session => {
+            const sid = session.session_id.toLowerCase().trim();
+            const card = elements.grid.querySelector(`.room-card[data-session-id="${sid}"]`);
+            if (card) elements.grid.appendChild(card);
+          });
+        }
+
+        updateKpiMetrics();
+      }
+
+      function createSessionCard(session, t) {
+        const rawStatus = session.status || 'active';
+        const isSilent = rawStatus === 'silent';
+        const isInactive = rawStatus === 'closed';
+
+        let statusLabel = isInactive ? t.pillInactive : t.pillActive;
+        let statusClass = isInactive ? 'pill-idle' : 'pill-live';
+        if (isSilent) statusClass = 'pill-silent';
+
+        const metrics = session.metrics || {};
+        const latencyTotal = Math.round(metrics.latency_ms || 0);
+        const asrMs = Math.round(metrics.asr_ms || 0);
+        const transMs = Math.round(metrics.trans_ms || 0);
+        const rpm = metrics.rpm || 0;
+        const safeSourceLang = (session.source_lang && session.source_lang !== 'auto') ? session.source_lang.toUpperCase() : '-';
+
+        const origin = window.location.origin;
+        const overlayUrl = `${origin}/overlay?session=${encodeURIComponent(session.session_id)}`;
+        const readerUrl = `${origin}/?session=${encodeURIComponent(session.session_id)}`;
+
+        const card = document.createElement('div');
+        const safeSessionId = escapeHtml(session.session_id);
+        const sidLower = session.session_id.toLowerCase().trim();
+        card.className = `room-card state-${rawStatus}`;
+        card.setAttribute('data-session-id', sidLower);
+
+        const safeTitle = escapeHtml(session.title || ('Sala ' + session.session_id));
+        const toastCopyMsg = t.toastObsCopied.replace('{id}', safeSessionId);
+
+        card.innerHTML = `
+          <div class="card-header">
+            <div class="room-identity">
+              <span class="room-id-tag">${safeSessionId}</span>
+              <span class="room-title">${safeTitle}</span>
+              ${(session.is_stream || session.stream_url) ? `<span class="badge-stream" title="${escapeHtml(session.stream_url || 'Stream en vivo activo')}">STREAM</span>` : ''}
+            </div>
+            <div class="header-right-actions">
+              <span class="status-pill ${statusClass}">${statusLabel}</span>
+              <button class="btn-pause ${isInactive ? 'is-paused' : ''}" 
+                      onclick="toggleSessionPause('${safeSessionId}', ${isInactive})" 
+                      title="${isInactive ? t.btnResumeTitle : t.btnPauseTitle}" 
+                      aria-label="${isInactive ? t.btnResumeTitle : t.btnPauseTitle}">
+                ${isInactive ? `
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <polygon points="6 4 19 12 6 20 6 4"></polygon>
+                  </svg>
+                ` : `
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <rect x="6" y="4" width="3.5" height="16" rx="1"></rect>
+                    <rect x="14.5" y="4" width="3.5" height="16" rx="1"></rect>
+                  </svg>
+                `}
+              </button>
+              <button class="btn-trash" onclick="deleteSession('${safeSessionId}')" title="${t.btnDeleteTitle}" aria-label="${t.btnDeleteTitle}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <!-- Métricas en fila con tooltips estilo Power BI -->
+            <div class="metrics-bar">
+              <div class="metric-item metric-latency">
+                <span class="metric-info-btn">!
+                  <span class="metric-tooltip">${t.tooltipLatency}</span>
+                </span>
+                <div class="metric-value highlight">${latencyTotal}ms</div>
+                <div class="metric-label">${t.latencyLabel}</div>
+              </div>
+              <div class="metric-item metric-asr">
+                <span class="metric-info-btn">!
+                  <span class="metric-tooltip">${t.tooltipAsr}</span>
+                </span>
+                <div class="metric-value">${asrMs}ms</div>
+                <div class="metric-label">${t.asrLabel}</div>
+              </div>
+              <div class="metric-item metric-trans">
+                <span class="metric-info-btn">!
+                  <span class="metric-tooltip">${t.tooltipTrans}</span>
+                </span>
+                <div class="metric-value">${transMs}ms</div>
+                <div class="metric-label">${t.transLabel}</div>
+              </div>
+              <div class="metric-item metric-viewers">
+                <div class="metric-value">${session.viewers || 0}</div>
+                <div class="metric-label">${t.viewersCardLabel}</div>
+              </div>
+            </div>
+
+            <!-- Fila compacta: Lenguaje original y Groq RPM -->
+            <div class="session-info-footer">
+              <span class="info-orig-lang">${t.origLangLabel} <strong>${safeSourceLang}</strong></span>
+              <span class="info-rpm">${t.rpmLabel} <strong>${rpm}</strong></span>
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <div class="btn-group">
+              <!-- Dropdown de Descarga (Habilitado solo al finalizar / inactiva) -->
+              <div class="dropdown-wrapper">
+                <button class="btn btn-sm btn-download" 
+                        onclick="toggleDownloadMenu(event, '${safeSessionId}')" 
+                        ${!isInactive ? `disabled title="${t.downloadDisabledTooltip}"` : `title="${t.downloadTooltip}"`}>
+                  <span>${t.btnDownload}</span>
+                  <svg class="dropdown-arrow-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <div id="dl-menu-${safeSessionId}" class="dropdown-menu hidden" onclick="event.stopPropagation()">
+                  <a href="/api/sessions/${encodeURIComponent(session.session_id)}/export?format=srt" class="dropdown-item" download>
+                    <span>SRT (.srt)</span>
+                  </a>
+                  <a href="/api/sessions/${encodeURIComponent(session.session_id)}/export?format=vtt" class="dropdown-item" download>
+                    <span>VTT (.vtt)</span>
+                  </a>
+                  <a href="/api/sessions/${encodeURIComponent(session.session_id)}/export?format=txt" class="dropdown-item" download>
+                    <span>TXT (.txt)</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div class="btn-group btn-group-actions">
+              <!-- Boton OBS Link con icono de enlace / URL (tipo 8 horizontal) -->
+              <button class="btn btn-sm" onclick="copyText('${overlayUrl}', '${toastCopyMsg}')" title="${t.btnObsTitle}">
+                <svg class="icon-link" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right: 0.2rem;">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                </svg>
+                <span>${t.btnObsLink}</span>
+              </button>
+
+              <a href="${readerUrl}" target="_blank" class="btn btn-sm" title="${t.btnOpenReaderTitle}">
+                ${t.btnOpenReader}
+              </a>
+            </div>
+          </div>
+        `;
+        return card;
+      }
+
+      function updateExistingCard(card, session, t) {
+        const rawStatus = session.status || 'active';
+        const isSilent = rawStatus === 'silent';
+        const isInactive = rawStatus === 'closed';
+        const safeSessionId = escapeHtml(session.session_id);
+
+        // Actualizar clase de estado de la tarjeta
+        const targetCardClass = `room-card state-${rawStatus}`;
+        if (card.className !== targetCardClass) {
+          card.className = targetCardClass;
+        }
+
+        // Título de la sala
+        const titleEl = card.querySelector('.room-title');
+        const safeTitle = session.title || ('Sala ' + session.session_id);
+        if (titleEl && titleEl.textContent !== safeTitle) {
+          titleEl.textContent = safeTitle;
+        }
+
+        // Badge STREAM
+        const roomIdentity = card.querySelector('.room-identity');
+        if (roomIdentity) {
+          let streamBadge = roomIdentity.querySelector('.badge-stream');
+          const hasStream = (session.is_stream || session.stream_url);
+          if (hasStream) {
+            const streamTitle = session.stream_url || 'Stream en vivo activo';
+            if (!streamBadge) {
+              streamBadge = document.createElement('span');
+              streamBadge.className = 'badge-stream';
+              streamBadge.textContent = 'STREAM';
+              roomIdentity.appendChild(streamBadge);
+            }
+            if (streamBadge.title !== streamTitle) streamBadge.title = streamTitle;
+          } else if (streamBadge) {
+            streamBadge.remove();
+          }
+        }
+
+        // Status pill
+        let statusLabel = isInactive ? t.pillInactive : t.pillActive;
+        let statusClass = isInactive ? 'pill-idle' : 'pill-live';
+        if (isSilent) statusClass = 'pill-silent';
+        const pillEl = card.querySelector('.status-pill');
+        if (pillEl) {
+          const targetPillClass = `status-pill ${statusClass}`;
+          if (pillEl.className !== targetPillClass) pillEl.className = targetPillClass;
+          if (pillEl.textContent !== statusLabel) pillEl.textContent = statusLabel;
+        }
+
+        // Botón Pausa / Reanudar (a la izquierda del botón de borrar)
+        const headerActions = card.querySelector('.header-right-actions');
+        let pauseBtn = card.querySelector('.btn-pause');
+        const trashBtn = card.querySelector('.btn-trash');
+        if (!pauseBtn && headerActions && trashBtn) {
+          pauseBtn = document.createElement('button');
+          headerActions.insertBefore(pauseBtn, trashBtn);
+        }
+        if (pauseBtn) {
+          const pauseTitle = isInactive ? t.btnResumeTitle : t.btnPauseTitle;
+          const targetPauseClass = `btn-pause ${isInactive ? 'is-paused' : ''}`;
+          if (pauseBtn.className !== targetPauseClass) pauseBtn.className = targetPauseClass;
+          if (pauseBtn.title !== pauseTitle) {
+            pauseBtn.title = pauseTitle;
+            pauseBtn.setAttribute('aria-label', pauseTitle);
+            pauseBtn.setAttribute('onclick', `toggleSessionPause('${safeSessionId}', ${isInactive})`);
+            pauseBtn.innerHTML = isInactive ? `
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <polygon points="6 4 19 12 6 20 6 4"></polygon>
+              </svg>
+            ` : `
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <rect x="6" y="4" width="3.5" height="16" rx="1"></rect>
+                <rect x="14.5" y="4" width="3.5" height="16" rx="1"></rect>
+              </svg>
+            `;
+          }
+        }
+
+        // Limpiar banner de silencio si existía previamente
+        const cardBody = card.querySelector('.card-body');
+        if (cardBody) {
+          const silenceBanner = cardBody.querySelector('.silence-banner');
+          if (silenceBanner) silenceBanner.remove();
+        }
+
+        // Métricas numéricas (solo se actualiza el valor de texto, los tooltips y botones "!" se mantienen intactos)
+        const metrics = session.metrics || {};
+        const latencyTotal = Math.round(metrics.latency_ms || 0);
+        const asrMs = Math.round(metrics.asr_ms || 0);
+        const transMs = Math.round(metrics.trans_ms || 0);
+        const rpm = metrics.rpm || 0;
+        const safeSourceLang = (session.source_lang && session.source_lang !== 'auto') ? session.source_lang.toUpperCase() : '-';
+
+        const latVal = card.querySelector('.metric-latency .metric-value');
+        if (latVal && latVal.textContent !== `${latencyTotal}ms`) latVal.textContent = `${latencyTotal}ms`;
+
+        const asrVal = card.querySelector('.metric-asr .metric-value');
+        if (asrVal && asrVal.textContent !== `${asrMs}ms`) asrVal.textContent = `${asrMs}ms`;
+
+        const transVal = card.querySelector('.metric-trans .metric-value');
+        if (transVal && transVal.textContent !== `${transMs}ms`) transVal.textContent = `${transMs}ms`;
+
+        const viewersVal = card.querySelector('.metric-viewers .metric-value');
+        const viewersCount = String(session.viewers || 0);
+        if (viewersVal && viewersVal.textContent !== viewersCount) viewersVal.textContent = viewersCount;
+
+        // Session info footer
+        const infoLang = card.querySelector('.info-orig-lang strong');
+        if (infoLang && infoLang.textContent !== safeSourceLang) infoLang.textContent = safeSourceLang;
+
+        const infoRpm = card.querySelector('.info-rpm strong');
+        if (infoRpm && infoRpm.textContent !== String(rpm)) infoRpm.textContent = String(rpm);
+
+        // Botón Descargar (actualizar disabled/title sin tocar el menú desplegable hijo)
+        const btnDownload = card.querySelector('.btn-download');
+        if (btnDownload) {
+          if (!isInactive) {
+            if (!btnDownload.hasAttribute('disabled')) {
+              btnDownload.setAttribute('disabled', 'true');
+              btnDownload.title = t.downloadDisabledTooltip;
+            }
+          } else {
+            if (btnDownload.hasAttribute('disabled')) {
+              btnDownload.removeAttribute('disabled');
+              btnDownload.title = t.downloadTooltip;
+            }
+          }
+        }
+
+        // Botón Finalizar Sesión (Eliminado)
+        const btnGroupActions = card.querySelector('.btn-group-actions');
+        if (btnGroupActions) {
+          const btnEnd = btnGroupActions.querySelector('.btn-end-session');
+          if (btnEnd) btnEnd.remove();
+        }
+      }
+
+      function escapeHtml(text) {
+        if (!text) return '';
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return text.replace(/[&<>"']/g, m => map[m]);
+      }
+
+      window.copyText = copyText;
+
+      // -----------------------------------------------------------------------
+      // Menu Desplegable de Descarga
+      // -----------------------------------------------------------------------
+      window.toggleDownloadMenu = function (e, sessionId) {
+        e.stopPropagation();
+        const menu = document.getElementById(`dl-menu-${sessionId}`);
+        if (!menu) return;
+
+        document.querySelectorAll('.dropdown-menu').forEach(m => {
+          if (m !== menu) m.classList.add('hidden');
+        });
+
+        menu.classList.toggle('hidden');
+      };
+
+      document.addEventListener('click', function () {
+        document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.add('hidden'));
+      });
+
+      // -----------------------------------------------------------------------
+      // Pausar / Reanudar Sesion (Pasa entre Activa e Inactiva)
+      // -----------------------------------------------------------------------
+      window.toggleSessionPause = async function (sessionId, isCurrentlyInactive) {
+        const t = I18N[currentSiteLang] || I18N.es;
+        const sidLower = sessionId.toLowerCase().trim();
+        const nextInactive = !isCurrentlyInactive;
+
+        // Actualización optimista inmediata en UI
+        const card = document.querySelector(`.room-card[data-session-id="${sidLower}"]`);
+        if (card) {
+          const pauseBtn = card.querySelector('.btn-pause');
+          const pillEl = card.querySelector('.status-pill');
+          const btnDownload = card.querySelector('.btn-download');
+
+          if (pauseBtn) {
+            pauseBtn.className = `btn-pause ${nextInactive ? 'is-paused' : ''}`;
+            const pTitle = nextInactive ? t.btnResumeTitle : t.btnPauseTitle;
+            pauseBtn.title = pTitle;
+            pauseBtn.setAttribute('aria-label', pTitle);
+            pauseBtn.setAttribute('onclick', `toggleSessionPause('${escapeHtml(sessionId)}', ${nextInactive})`);
+            pauseBtn.innerHTML = nextInactive ? `
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <polygon points="6 4 19 12 6 20 6 4"></polygon>
+              </svg>
+            ` : `
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <rect x="6" y="4" width="3.5" height="16" rx="1"></rect>
+                <rect x="14.5" y="4" width="3.5" height="16" rx="1"></rect>
+              </svg>
+            `;
+          }
+          if (pillEl) {
+            pillEl.className = `status-pill ${nextInactive ? 'pill-idle' : 'pill-live'}`;
+            pillEl.textContent = nextInactive ? t.pillInactive : t.pillActive;
+          }
+          if (btnDownload) {
+            if (nextInactive) {
+              btnDownload.removeAttribute('disabled');
+              btnDownload.title = t.downloadTooltip;
+            } else {
+              btnDownload.setAttribute('disabled', 'true');
+              btnDownload.title = t.downloadDisabledTooltip;
+            }
+          }
+        }
+
+        try {
+          if (isCurrentlyInactive) {
+            // Reanudar a Activa
+            const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/resume`, { method: 'POST' });
+            if (res.ok) {
+              showToast(t.toastSessionResumed.replace('{id}', sessionId));
+              await fetchTelemetry();
+            } else {
+              const err = await res.json().catch(() => ({}));
+              showToast(err.detail || 'Error al reanudar la sesión');
+              await fetchTelemetry();
+            }
+          } else {
+            // Pausar a Inactiva
+            const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/close`, { method: 'POST' });
+            if (res.ok) {
+              showToast(t.toastSessionClosed.replace('{id}', sessionId));
+              await fetchTelemetry();
+            } else {
+              const err = await res.json().catch(() => ({}));
+              showToast(err.detail || 'Error al pausar la sesión');
+              await fetchTelemetry();
+            }
+          }
+        } catch (e) {
+          showToast(`Error: ${e}`);
+          await fetchTelemetry();
+        }
+      };
+
+      // Finalizar Sesion (Pasa a Inactiva, compatible con botón inferior si existe)
+      window.closeSession = async function (sessionId) {
+        return window.toggleSessionPause(sessionId, false);
+      };
+
+      // -----------------------------------------------------------------------
+      // Eliminar Sesion Permanentemente (Boton Trash)
+      // -----------------------------------------------------------------------
+      window.deleteSession = async function (sessionId) {
+        const t = I18N[currentSiteLang] || I18N.es;
+        if (!confirm(t.confirmDelete.replace('{id}', sessionId))) return;
+        try {
+          const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' });
+          if (res.ok) {
+            showToast(t.toastSessionDeleted.replace('{id}', sessionId));
+            selectedSessionIds.delete(sessionId.toLowerCase().trim());
+            fetchTelemetry();
+          } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.detail || 'Error al eliminar la sesión');
+          }
+        } catch (e) {
+          showToast(`Error de conexión: ${e}`);
+        }
+      };
+
+      // -----------------------------------------------------------------------
+      // Telemetria REST y SSE
+      // -----------------------------------------------------------------------
+      async function fetchTelemetry() {
+        const iconRefresh = elements.btnRefresh ? elements.btnRefresh.querySelector('.icon-refresh') : null;
+        if (iconRefresh) iconRefresh.classList.add('spinning');
+
+        try {
+          const res = await fetch('/api/telemetry');
+          if (res.ok) {
+            const data = await res.json();
+            lastKnownSessions = data.sessions || [];
+            renderSlicer();
+            updateKpiMetrics();
+            updateAnalyticsCharts(lastKnownSessions);
+            renderSessions(lastKnownSessions);
+          }
+        } catch (e) {
+          console.warn('Fallo consultando telemetria REST:', e);
+        } finally {
+          if (iconRefresh) {
+            setTimeout(() => iconRefresh.classList.remove('spinning'), 400);
+          }
+        }
+      }
+
+      let reconnectSseTimer = null;
+
+      function initSSE() {
+        if (eventSource) {
+          try { eventSource.close(); } catch (e) {}
+        }
+
+        try {
+          eventSource = new EventSource('/api/telemetry/stream');
+
+          eventSource.onopen = function () {
+            const t = I18N[currentSiteLang] || I18N.es;
+            if (elements.kpiSseStatus) elements.kpiSseStatus.textContent = t.sseConnected;
+            if (fallbackTimer) {
+              clearInterval(fallbackTimer);
+              fallbackTimer = null;
+            }
+            if (reconnectSseTimer) {
+              clearTimeout(reconnectSseTimer);
+              reconnectSseTimer = null;
+            }
+          };
+
+          eventSource.onmessage = function (e) {
+            try {
+              const data = JSON.parse(e.data);
+              lastKnownSessions = data.sessions || [];
+              renderSlicer();
+              updateKpiMetrics();
+              updateAnalyticsCharts(lastKnownSessions);
+              renderSessions(lastKnownSessions);
+            } catch (err) {
+              console.error('Error parseando SSE:', err);
+            }
+          };
+
+          eventSource.onerror = function () {
+            const t = I18N[currentSiteLang] || I18N.es;
+            if (elements.kpiSseStatus) elements.kpiSseStatus.textContent = t.sseReconnecting;
+            if (!fallbackTimer) {
+              fallbackTimer = setInterval(fetchTelemetry, 2000);
+            }
+            if (!reconnectSseTimer) {
+              reconnectSseTimer = setTimeout(() => {
+                reconnectSseTimer = null;
+                if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
+                  initSSE();
+                }
+              }, 4000);
+            }
+          };
+        } catch (err) {
+          console.warn('SSE no disponible, conmutando a sondeo HTTP:', err);
+          if (!fallbackTimer) {
+            fallbackTimer = setInterval(fetchTelemetry, 2000);
+          }
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // Modal: Agregar Transmision
+      // -----------------------------------------------------------------------
+      function openAddSessionModal() {
+        elements.modalErrorMsg.classList.add('hidden');
+        elements.modalErrorMsg.textContent = '';
+        elements.inputSessionId.value = '';
+        elements.inputSessionTitle.value = '';
+        if (elements.inputStreamUrl) elements.inputStreamUrl.value = '';
+        if (elements.selectSourceLang) elements.selectSourceLang.value = 'es';
+        elements.modalAddSession.classList.remove('hidden');
+        setTimeout(() => elements.inputSessionId.focus(), 60);
+      }
+
+      function closeAddSessionModal() {
+        elements.modalAddSession.classList.add('hidden');
+      }
+
+      async function handleAddSessionSubmit(e) {
+        e.preventDefault();
+        const t = I18N[currentSiteLang] || I18N.es;
+
+        const sessionId = elements.inputSessionId.value.trim().toLowerCase();
+        const title = elements.inputSessionTitle.value.trim();
+        const sourceLang = (elements.selectSourceLang && elements.selectSourceLang.value) ? elements.selectSourceLang.value : 'es';
+        const streamUrl = elements.inputStreamUrl ? elements.inputStreamUrl.value.trim() : '';
+
+        if (!sessionId) {
+          elements.modalErrorMsg.textContent = t.modalErrRequired;
+          elements.modalErrorMsg.classList.remove('hidden');
+          return;
+        }
+
+        const slugPattern = /^[a-zA-Z0-9_\-]+$/;
+        if (!slugPattern.test(sessionId)) {
+          elements.modalErrorMsg.textContent = t.modalErrInvalid;
+          elements.modalErrorMsg.classList.remove('hidden');
+          return;
+        }
+
+        elements.modalErrorMsg.classList.add('hidden');
+
+        try {
+          const payload = {
+            session_id: sessionId,
+            title: title || undefined
+          };
+          if (sourceLang) payload.source_lang = sourceLang;
+          if (streamUrl) {
+            payload.stream_url = streamUrl;
+          }
+
+          const res = await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            let errorText = 'Error al crear la transmisión';
+            if (typeof errData.detail === 'string') {
+              errorText = errData.detail;
+            } else if (Array.isArray(errData.detail)) {
+              errorText = errData.detail.map(d => d.msg || JSON.stringify(d)).join(', ');
+            }
+            elements.modalErrorMsg.textContent = errorText;
+            elements.modalErrorMsg.classList.remove('hidden');
+            return;
+          }
+
+          closeAddSessionModal();
+          showToast(streamUrl ? `Transmisión conectando a stream: ${sessionId}` : t.modalSuccessCreated);
+          selectedSessionIds.add(sessionId);
+          fetchTelemetry();
+        } catch (err) {
+          elements.modalErrorMsg.textContent = `Error de conexión: ${err.message}`;
+          elements.modalErrorMsg.classList.remove('hidden');
+        }
+      }
+
+      // Event Listeners
+      if (elements.formGate) {
+        elements.formGate.addEventListener('submit', handleGateSubmit);
+      }
+
+      if (elements.btnGateCancel) {
+        elements.btnGateCancel.addEventListener('click', handleGateCancel);
+      }
+
+      if (elements.selectSiteLang) {
+        elements.selectSiteLang.addEventListener('change', (e) => {
+          setSiteLanguage(e.target.value);
+        });
+      }
+
+      if (elements.btnRefresh) {
+        elements.btnRefresh.addEventListener('click', fetchTelemetry);
+      }
+
+      if (elements.btnAddSession) {
+        elements.btnAddSession.addEventListener('click', openAddSessionModal);
+      }
+
+      if (elements.btnModalClose) {
+        elements.btnModalClose.addEventListener('click', closeAddSessionModal);
+      }
+
+      if (elements.btnModalCancel) {
+        elements.btnModalCancel.addEventListener('click', closeAddSessionModal);
+      }
+
+      if (elements.formAddSession) {
+        elements.formAddSession.addEventListener('submit', handleAddSessionSubmit);
+      }
+
+      // Cerrar modal al cliquear fondo
+      if (elements.modalAddSession) {
+        elements.modalAddSession.addEventListener('click', (e) => {
+          if (e.target === elements.modalAddSession) closeAddSessionModal();
+        });
+      }
+
+      // Tecla Escape para cerrar modal
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !elements.modalAddSession.classList.contains('hidden')) {
+          closeAddSessionModal();
+        }
+      });
+
+      // Inicialización
+      initAnalyticsCharts();
+      setSiteLanguage(currentSiteLang);
+      checkAuth();
+
+    })();
+  </script>
+</body>
+</html>

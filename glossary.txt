@@ -1,0 +1,54 @@
+# ==============================================================================
+# GLOSARIO DE JERGA TÉCNICA, SLANG, ENTIDADES Y DOMAIN BIAS (ASR & LLM)
+# ==============================================================================
+# Los términos incluidos aquí se inyectan como biasing en el prompt de Whisper
+# y en las instrucciones del traductor para evitar transcripciones erróneas,
+# preservar grafías oficiales de personas/marcas y mantener tecnicismos intactos.
+# ==============================================================================
+
+# Core & Alta Frecuencia (Tech Brands, Bases de Datos & Figuras Clave)
+AWS, Dijkstra, SQLite, Postgres, PostgreSQL, Kubernetes, Docker, Python, Linux, GitHub
+
+# Científicos de la Computación & Pioneros Legendarios
+Edsger Dijkstra, Alan Turing, Ada Lovelace, Linus Torvalds, Donald Knuth, Dennis Ritchie, Ken Thompson, Bjarne Stroustrup, Guido van Rossum, James Gosling, Tim Berners-Lee, John Carmack, Grace Hopper, Claude Shannon, Leslie Lamport, Barbara Liskov, Richard Stallman, Martin Fowler, Robert C. Martin, Kent Beck, John von Neumann
+
+# Líderes Contemporáneos, CEOs, Fundadores & Pioneros IA
+Sam Altman, Dario Amodei, Demis Hassabis, Jensen Huang, Satya Nadella, Sundar Pichai, Mark Zuckerberg, Jeff Bezos, Elon Musk, Yann LeCun, Geoffrey Hinton, Ilya Sutskever, Andrej Karpathy, Fei-Fei Li, Marc Andreessen, Paul Graham, Steve Jobs, Bill Gates, Steve Wozniak, Tristan Harris, Aza Raskin, Eliezer Yudkowsky
+
+# Empresas Tecnológicas, Cloud Giants & Plataformas
+AWS, Amazon Web Services, Google Cloud, GCP, Microsoft Azure, Cloudflare, Oracle, IBM, Cisco, Intel, AMD, Nvidia, Apple, Meta, Google, Microsoft, Datadog, Snowflake, Palantir, Vercel, Supabase, Red Hat, HashiCorp, Canonical, VMware
+
+# Empresas, Startups & Laboratorios IA
+Anthropic, OpenAI, DeepMind, Google DeepMind, Mistral, Mistral AI, Hugging Face, Cohere, Perplexity, Scale AI, ElevenLabs, Midjourney, Runway, Stability AI, xAI, Groq
+
+# Bases de Datos, Motores de Búsqueda & Almacenamiento
+PostgreSQL, Postgres, SQLite, MySQL, MariaDB, Redis, Valkey, MongoDB, Cassandra, DynamoDB, Elasticsearch, ClickHouse, DuckDB, Neo4j, Couchbase, ScyllaDB, CockroachDB, Pinecone, Qdrant, Milvus, ChromaDB, RocksDB
+
+# Control de Versiones, Cultura Dev & Prácticas de Código
+Pull Request, PR, Merge Request, MR, Git, GitHub, GitLab, Repository, Commit, Branch, Merge, Rebase, Cherry-pick, Conflict
+Refactor, Technical Debt, Code Smell, Boilerplate, Syntactic Sugar, Dogfooding, Yak Shaving, Bike-shedding, Rubber Ducking, Bus Factor, Bug, Feature, Release, Dependency, Package, SDK, CLI, Script, Benchmark, Timeout, Rate Limit
+
+# Arquitectura de Software, Concurrencia & Resiliencia
+Monolith, Microservices, Event-Driven Architecture, EDA, CQRS, Race Condition, Deadlock, Thread Pool, Idempotency
+Circuit Breaker, Backpressure, Graceful Degradation, Reverse Proxy, Edge Computing, Cold Start, Sharding, CAP Theorem, Eventual Consistency, Connection Pooling
+
+# Cloud, Contenedores, Orquestación & Despliegue (DevOps / GitOps)
+Kubernetes, K8s, Docker, Container, Pod, Ingress Controller, Service Mesh, Istio, Envoy, Cluster, Cloudflare, Tunnels, Valkey, Redis
+CI/CD, Canary Release, Blue-Green Deployment, Rolling Update, Infrastructure as Code, IaC, Terraform, OpenTofu, Pulumi, State Drift, GitOps, Pipeline, Deploy, Deployment, Rollback, Staging, Production, Serverless, Microservicios
+
+# SRE, Observabilidad & Métricas
+Observability, O11y, OpenTelemetry, OTel, SLI, SLO, SLA, Error Budget, P50, P90, P99, Throughput, Latency, Buffer, Overflow
+
+# Inteligencia Artificial, LLMs, ASR & Machine Learning
+LLM, SLM, RAG, Vector Store, Vector Database, Embeddings, Chunking, Quantization, AWQ, GGUF, Fine-Tuning, PEFT, LoRA, Context Window, Needle in a Haystack, Hallucination, RLHF, DPO, Temperature, Top-P, Zero-shot, Few-shot, Chain-of-Thought, CoT, Continuous Batching, ASR, VAD, Diarization, Speech-to-Text, Voice Activity Detection, NLP, Inference, Silero VAD, PyTorch, Model, Prompt, System Prompt, Token, Tokens, Transformer, AGI, ASI, Alignment, Superintelligence
+
+# Modelos & Herramientas IA Populares
+Claude, ChatGPT, GPT-4, GPT-5, Gemini, DeepSeek, Llama, Midjourney, Stable Diffusion, Sora, Copilot, Cursor
+
+# Ciberseguridad, Identidad & Hardening
+Zero Trust, Principle of Least Privilege, PoLP, IAM, RBAC, ABAC, SSO, OAuth 2.0, OIDC, JWT
+Attack Surface, Blast Radius, CVE, Zero-Day, 0-day, Payload, Reverse Shell, SQL Injection, SQLi, Cross-Site Scripting, XSS, SSRF, IDOR, DDoS, WAF, Man-in-the-Middle, MitM, Buffer Overflow, Privilege Escalation, mTLS, Salting, Hashing
+
+# Protocolos, Redes, Streaming & Audio
+WebSocket, SSE, gRPC, Protobuf, Pub/Sub, Head-of-Line Blocking, MTU, FastAPI, Uvicorn, Gunicorn, WebSockets, REST, API, Webhook, Middleware, Broker, Ingestion, Frontend, Backend, Fullstack, Framework, Stack, Endpoint, JSON, Schema
+OBS Studio, Browser Source, Stream, Streaming, Bitrate, Framerate, FPS, Mono, Stereo, Sample Rate, PCM, WAV, Float32, Hertz, kHz, Codec, Packet Loss, Jitter, Keep-Alive, Ping, Pong, VOD, Livestream, Change Data Capture, CDC
