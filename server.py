@@ -213,6 +213,18 @@ class ConnectionManager:
             if ws is not None:
                 await self.disconnect(ws)
 
+    async def close_session_connections(self, session_id: str, code: int = 4004, reason: str = "Sesión no encontrada :/"):
+        """Cierra y desconecta todas las conexiones WebSocket activas de una sesión."""
+        norm_session = session_id.lower().strip()
+        async with self._lock:
+            clients = list(self.rooms.get(norm_session, set()))
+        for ws in clients:
+            try:
+                await ws.close(code=code, reason=reason)
+            except Exception:
+                pass
+            await self.disconnect(ws)
+
 
 class TelemetryTracker:
     """
@@ -858,7 +870,37 @@ async def delete_session(session_id: str):
     await stream_manager.stop_worker(sid)
     success = await db.delete_session(sid)
     await telemetry.remove_session(sid)
+
+    # Limpiar historial y canales en Valkey/Redis
+    if valkey_client:
+        try:
+            await valkey_client.delete(f"subtitles:{sid}:history")
+            await valkey_client.delete(f"subtitles:{sid}:live")
+        except Exception as e:
+            logger.warning(f"Error limpiando Valkey para sesión {sid}: {e}")
+
+    # Notificar a los clientes conectados a la sesión que fue eliminada
+    await manager.broadcast_to_session(sid, {
+        "type": "error",
+        "error_code": "session_not_found",
+        "session_id": sid,
+        "message": "Sesión no encontrada :/"
+    })
+    # Cerrar las conexiones WebSocket activas de esa sesión
+    await manager.close_session_connections(sid, code=4004, reason="Sesión no encontrada :/")
+
     return {"status": "deleted", "session_id": sid, "success": success}
+
+
+@app.get("/api/sessions/{session_id}")
+async def get_session_info(session_id: str):
+    """Obtiene los datos de una sesión o retorna 404 si fue eliminada o no existe."""
+    sid = session_id.lower().strip()
+    session_row = await db.get_session(sid)
+    if not session_row and sid not in telemetry._sessions:
+        raise HTTPException(status_code=404, detail="Sesión no encontrada :/")
+    snap = telemetry._sessions.get(sid) or session_row
+    return {"status": "ok", "session": snap}
 
 
 @app.get("/api/sessions/{session_id}/export")
@@ -982,8 +1024,21 @@ async def websocket_endpoint(
     query_session = websocket.query_params.get("session_id") or websocket.query_params.get("session")
     active_session = (session_id or query_session or "").lower().strip()
 
-    if not active_session:
-        # Si no se especifica sala, buscar si hay alguna sesión registrada o usar default
+    if active_session:
+        # Validar si la sesión solicitada existe en base de datos o telemetría
+        session_row = await db.get_session(active_session)
+        if not session_row and active_session not in telemetry._sessions:
+            await websocket.accept()
+            await websocket.send_json({
+                "type": "error",
+                "error_code": "session_not_found",
+                "session_id": active_session,
+                "message": "Sesión no encontrada :/"
+            })
+            await websocket.close(code=4004, reason="Sesión no encontrada :/")
+            return
+    else:
+        # Si no se especifica sala, buscar si hay alguna sesión registrada existente
         try:
             db_sessions = await db.list_sessions()
         except Exception:
@@ -994,17 +1049,16 @@ async def websocket_endpoint(
         elif telemetry._sessions:
             active_session = list(telemetry._sessions.keys())[0]
         else:
-            active_session = "default"
-            try:
-                await db.get_or_create_session(
-                    session_id="default",
-                    source_lang=None,
-                    target_lang=None,
-                    title="Sala Principal"
-                )
-                await telemetry.register_session("default", "Sala Principal", None, None)
-            except Exception as e:
-                logger.warning(f"No se pudo auto-registrar sala por defecto: {e}")
+            # No hay ninguna sesión activa en el sistema
+            await websocket.accept()
+            await websocket.send_json({
+                "type": "error",
+                "error_code": "session_not_found",
+                "session_id": "",
+                "message": "Sesión no encontrada :/"
+            })
+            await websocket.close(code=4004, reason="Sesión no encontrada :/")
+            return
 
     await manager.connect(websocket, active_session)
 

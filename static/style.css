@@ -13,8 +13,8 @@
   --text-time: #71717a;
 
   /* Tipografia Monocromatica / Monospace */
-  --font-subtitles: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  --font-ui: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-subtitles: "Consolas", ui-monospace, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
+  --font-ui: "Consolas", ui-monospace, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
 
   --font-base-size: 1rem;
   --subtitle-font-size: 1.35rem;
@@ -693,6 +693,64 @@ body.hide-source .subtitle-source {
   margin-top: 0.5rem;
 }
 
+/* Mini Cuadro OBS Link */
+.obs-modal-card {
+  max-width: 480px;
+}
+
+.obs-url-input {
+  width: 100%;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  padding: 0.6rem 0.75rem;
+  background-color: var(--bg-surface-hover);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  outline: none;
+  cursor: text;
+  user-select: all;
+  letter-spacing: -0.01em;
+}
+
+.obs-url-input:focus {
+  border-color: var(--text-muted);
+}
+
+.obs-hint {
+  font-family: var(--font-ui);
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 0.4rem;
+}
+
+/* Estado de Sesión No Encontrada */
+.not-found-face {
+  font-family: var(--font-ui);
+  font-size: 2.8rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  margin-bottom: 0.6rem;
+  letter-spacing: -0.05em;
+  user-select: none;
+}
+
+.not-found-actions {
+  margin-top: 1.25rem;
+  display: flex;
+  justify-content: center;
+}
+
+.not-found-actions .btn-control {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.15rem;
+  font-size: 0.85rem;
+}
+
 /* ==========================================================================
    Modo Claro (Color cremito claro, letras en negro puro, minimalista)
    ========================================================================== */
@@ -872,6 +930,12 @@ body.theme-light .modal-input {
   color: #000000;
 }
 
+body.theme-light .obs-url-input {
+  background-color: #f0ece1;
+  color: #000000;
+  border-color: #ded8cc;
+}
+
 body.theme-light .modal-input:focus {
   border-color: #000000;
 }
@@ -910,12 +974,23 @@ body.mode-overlay.obs-transparent {
 }
 
 body.mode-fullscreen .header,
-body.mode-fullscreen .empty-state,
+body.mode-fullscreen #empty-state,
 body.mode-fullscreen .toast,
 body.mode-overlay .header,
-body.mode-overlay .empty-state,
+body.mode-overlay #empty-state,
 body.mode-overlay .toast {
   display: none !important;
+}
+
+body.mode-fullscreen #not-found-state:not(.hidden),
+body.mode-overlay #not-found-state:not(.hidden) {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  margin: auto auto !important;
+  z-index: 100 !important;
 }
 
 /* Controles flotantes en Modo Fullscreen */

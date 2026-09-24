@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Subtítulos en Vivo | Live Translation</title>
-  <link rel="stylesheet" href="/static/style.css?v=20260924_8">
+  <link rel="stylesheet" href="/static/style.css?v=20260924_9">
   <style>
     .header-left {
       gap: 1.1rem !important;
@@ -205,6 +205,22 @@
       <p id="empty-subtitle" class="empty-subtitle">Las frases aparecerán aquí en tiempo real según el par de idiomas seleccionado.</p>
     </div>
 
+    <!-- Mensaje cuando la sesión no existe o fue eliminada -->
+    <div id="not-found-state" class="empty-state not-found-state hidden">
+      <div class="not-found-face">:/</div>
+      <p id="not-found-title" class="empty-title">Sesión no encontrada :/</p>
+      <p id="not-found-subtitle" class="empty-subtitle">Esta sesión no existe o fue eliminada permanentemente.</p>
+      <div class="not-found-actions">
+        <a href="/" id="btn-not-found-home" class="btn-control btn-highlight">
+          <svg class="icon-home" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+          <span id="lbl-not-found-home">Ir a sesiones activas</span>
+        </a>
+      </div>
+    </div>
+
     <!-- Lista dinamica de subtitulos -->
     <div id="subtitles-list" class="subtitles-list"></div>
   </main>
@@ -213,6 +229,29 @@
   <button id="btn-resume-scroll" class="btn-resume-scroll hidden" aria-label="Bajar a los subtítulos más recientes">
     <span id="lbl-resume-scroll">Nuevos subtítulos</span>
   </button>
+
+  <!-- Mini Cuadro para Enlace OBS -->
+  <div id="obs-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lbl-obs-title">
+    <div class="modal-card obs-modal-card">
+      <div class="modal-header">
+        <h3 id="lbl-obs-title" class="modal-title">Enlace para OBS Studio</h3>
+        <button type="button" id="btn-obs-close" class="modal-close-btn" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="modal-field">
+        <label id="lbl-obs-desc" class="modal-label" for="obs-url-input">URL Browser Source</label>
+        <div class="obs-input-wrapper">
+          <input type="text" id="obs-url-input" class="modal-input obs-url-input" readonly spellcheck="false" />
+        </div>
+        <p id="lbl-obs-hint" class="obs-hint">Pega esta URL en una fuente "Navegador" (Browser Source) dentro de OBS Studio para superponer los subtítulos en directo.</p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="btn-obs-cancel" class="btn-control">Cerrar</button>
+        <button type="button" id="btn-obs-copy" class="btn-control btn-highlight">
+          <span id="lbl-obs-copy-btn">Copiar Link</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal de Autenticacion para Admin Settings / Control Room -->
   <div id="auth-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lbl-auth-title">
@@ -239,6 +278,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <!-- Scripts -->
-  <script src="/static/app.js?v=20260924_8"></script>
+  <script src="/static/app.js?v=20260924_9"></script>
 </body>
 </html>

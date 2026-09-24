@@ -277,6 +277,16 @@ class DatabaseManager:
                 return cursor.rowcount > 0
         return await asyncio.to_thread(_sync_op)
 
+    async def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Obtiene una sesión específica por su ID si existe."""
+        def _sync_op():
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM sessions WHERE session_id = ?", (session_id,))
+                row = cursor.fetchone()
+                return dict(row) if row else None
+        return await asyncio.to_thread(_sync_op)
+
 
 
 # Instancia singleton global

@@ -61,6 +61,20 @@
     lblAuthKey: document.getElementById('lbl-auth-key'),
     btnAuthSubmit: document.getElementById('btn-auth-submit'),
     toast: document.getElementById('toast'),
+    notFoundState: document.getElementById('not-found-state'),
+    notFoundTitle: document.getElementById('not-found-title'),
+    notFoundSubtitle: document.getElementById('not-found-subtitle'),
+    btnNotFoundHome: document.getElementById('btn-not-found-home'),
+    lblNotFoundHome: document.getElementById('lbl-not-found-home'),
+    obsModal: document.getElementById('obs-modal'),
+    lblObsTitle: document.getElementById('lbl-obs-title'),
+    lblObsDesc: document.getElementById('lbl-obs-desc'),
+    lblObsHint: document.getElementById('lbl-obs-hint'),
+    obsUrlInput: document.getElementById('obs-url-input'),
+    btnObsClose: document.getElementById('btn-obs-close'),
+    btnObsCancel: document.getElementById('btn-obs-cancel'),
+    btnObsCopy: document.getElementById('btn-obs-copy'),
+    lblObsCopyBtn: document.getElementById('lbl-obs-copy-btn'),
   };
 
   // -------------------------------------------------------------------------
@@ -99,6 +113,15 @@
       authCancel: 'Cancelar',
       authEnter: 'Ingresar',
       authError: 'Access Key incorrecta',
+      obsModalTitle: 'Enlace para OBS Studio',
+      obsModalLabel: 'URL Browser Source',
+      obsModalHint: 'Pega esta URL en una fuente "Navegador" (Browser Source) dentro de OBS Studio para superponer los subtítulos en directo.',
+      obsModalClose: 'Cerrar',
+      obsModalCopy: 'Copiar Link',
+      obsModalCopied: '¡Copiado!',
+      sessionNotFoundTitle: 'Sesión no encontrada :/',
+      sessionNotFoundDesc: 'Esta sesión no existe o fue eliminada permanentemente.',
+      sessionNotFoundHome: 'Ir a sesiones activas',
       langPairs: {
         'en-es': 'EN -> ES',
         'es-es': 'ES -> ES (Nativo)',
@@ -140,6 +163,15 @@
       authCancel: 'Cancel',
       authEnter: 'Enter',
       authError: 'Invalid Access Key',
+      obsModalTitle: 'OBS Studio Link',
+      obsModalLabel: 'Browser Source URL',
+      obsModalHint: 'Copy this URL and add it as a "Browser Source" in OBS Studio to overlay live subtitles.',
+      obsModalClose: 'Close',
+      obsModalCopy: 'Copy Link',
+      obsModalCopied: 'Copied!',
+      sessionNotFoundTitle: 'Session not found :/',
+      sessionNotFoundDesc: 'This session does not exist or was permanently deleted.',
+      sessionNotFoundHome: 'Go to active sessions',
       langPairs: {
         'en-es': 'EN -> ES',
         'es-es': 'ES -> ES (Native)',
@@ -181,6 +213,15 @@
       authCancel: 'Cancelar',
       authEnter: 'Entrar',
       authError: 'Access Key incorreta',
+      obsModalTitle: 'Link para OBS Studio',
+      obsModalLabel: 'URL Browser Source',
+      obsModalHint: 'Copie esta URL e adicione-a como fonte "Navegador" no OBS Studio para sobrepor as legendas ao vivo.',
+      obsModalClose: 'Fechar',
+      obsModalCopy: 'Copiar Link',
+      obsModalCopied: 'Copiado!',
+      sessionNotFoundTitle: 'Sessão não encontrada :/',
+      sessionNotFoundDesc: 'Esta sessão não existe ou foi excluída permanentemente.',
+      sessionNotFoundHome: 'Ir para sessões ativas',
       langPairs: {
         'en-es': 'EN -> ES',
         'es-es': 'ES -> ES (Nativo)',
@@ -442,6 +483,16 @@
     if (elements.authKeyInput) elements.authKeyInput.placeholder = t.authPlaceholder;
     if (elements.btnAuthCancel) elements.btnAuthCancel.textContent = t.authCancel;
     if (elements.btnAuthSubmit) elements.btnAuthSubmit.textContent = t.authEnter;
+
+    if (elements.lblObsTitle) elements.lblObsTitle.textContent = t.obsModalTitle;
+    if (elements.lblObsDesc) elements.lblObsDesc.textContent = t.obsModalLabel;
+    if (elements.lblObsHint) elements.lblObsHint.textContent = t.obsModalHint;
+    if (elements.btnObsCancel) elements.btnObsCancel.textContent = t.obsModalClose;
+    if (elements.lblObsCopyBtn) elements.lblObsCopyBtn.textContent = t.obsModalCopy;
+
+    if (elements.notFoundTitle && !isSessionNotFound) elements.notFoundTitle.textContent = t.sessionNotFoundTitle;
+    if (elements.notFoundSubtitle && !isSessionNotFound) elements.notFoundSubtitle.textContent = t.sessionNotFoundDesc;
+    if (elements.lblNotFoundHome) elements.lblNotFoundHome.textContent = t.sessionNotFoundHome;
   }
 
   function applyViewMode() {
@@ -525,6 +576,48 @@
     }
   }
 
+  let isSessionNotFound = false;
+
+  function showSessionNotFoundUI(customTitle, customSubtitle) {
+    isSessionNotFound = true;
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    cleanupSocket();
+    setStatus('disconnected');
+    if (elements.emptyState) {
+      elements.emptyState.classList.add('hidden');
+    }
+    if (elements.subtitlesList) {
+      elements.subtitlesList.innerHTML = '';
+      elements.subtitlesList.classList.add('hidden');
+    }
+    if (elements.btnResumeScroll) {
+      elements.btnResumeScroll.classList.add('hidden');
+    }
+    if (elements.notFoundState) {
+      elements.notFoundState.classList.remove('hidden');
+      const t = I18N[currentSiteLang] || I18N.es;
+      if (elements.notFoundTitle) {
+        elements.notFoundTitle.textContent = customTitle || t.sessionNotFoundTitle || 'Sesión no encontrada :/';
+      }
+      if (elements.notFoundSubtitle) {
+        elements.notFoundSubtitle.textContent = customSubtitle || t.sessionNotFoundDesc || 'Esta sesión no existe o fue eliminada permanentemente.';
+      }
+    }
+  }
+
+  function hideSessionNotFoundUI() {
+    isSessionNotFound = false;
+    if (elements.notFoundState) {
+      elements.notFoundState.classList.add('hidden');
+    }
+    if (elements.subtitlesList) {
+      elements.subtitlesList.classList.remove('hidden');
+    }
+  }
+
   function connectWebSocket() {
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
@@ -543,6 +636,7 @@
     }
 
     ws.onopen = function () {
+      hideSessionNotFoundUI();
       setStatus('connected');
       console.log('[WS] Conectado a:', wsUrl);
 
@@ -567,6 +661,13 @@
     };
 
     ws.onclose = function (event) {
+      if (event.code === 4004 || isSessionNotFound) {
+        console.warn('WebSocket cerrado: Sesión no encontrada (4004).');
+        setStatus('disconnected');
+        cleanupSocket();
+        showSessionNotFoundUI();
+        return;
+      }
       console.warn('WebSocket cerrado (code:', event.code, '). Reintentando...');
       setStatus('reconnecting');
       cleanupSocket();
@@ -587,8 +688,10 @@
   }
 
   function scheduleReconnect() {
+    if (isSessionNotFound) return;
     if (reconnectTimer) return;
     reconnectTimer = setTimeout(function () {
+      reconnectTimer = null;
       connectWebSocket();
     }, RECONNECT_INTERVAL_MS);
   }
@@ -607,6 +710,15 @@
   }
 
   function handleIncomingMessage(payload) {
+    if (!payload) return;
+
+    // Manejo de error de sesión eliminada o inexistente
+    if (payload.type === 'error' && (payload.error_code === 'session_not_found' || payload.error === 'session_not_found')) {
+      showSessionNotFoundUI(payload.message);
+      cleanupSocket();
+      return;
+    }
+
     // 1. Caso: Historial Inicial ({ type: "history", data: [...] })
     if (Array.isArray(payload)) {
       renderHistory(payload);
@@ -926,22 +1038,39 @@
     prompt('OBS Browser Source URL:', url);
   }
 
-  function copyOverlayUrl() {
-    const t = I18N[currentSiteLang] || I18N.es;
+  function openObsModal() {
     const origin = window.location.origin;
     const langArg = currentUserLang ? `&lang=${encodeURIComponent(currentUserLang)}` : '';
     const sessionArg = currentSession && currentSession !== 'main' ? `&session=${encodeURIComponent(currentSession)}` : '';
     const overlayUrl = `${origin}/overlay?mode=overlay${sessionArg}${langArg}`;
 
+    if (elements.obsUrlInput) {
+      elements.obsUrlInput.value = overlayUrl;
+    }
+    if (elements.obsModal) {
+      elements.obsModal.classList.remove('hidden');
+    }
+    if (elements.obsUrlInput) {
+      elements.obsUrlInput.focus();
+      elements.obsUrlInput.select();
+    }
+
+    const t = I18N[currentSiteLang] || I18N.es;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(overlayUrl).then(function () {
         showToast(t.toastCopied);
-      }).catch(function () {
-        promptFallback(overlayUrl);
-      });
-    } else {
-      promptFallback(overlayUrl);
+      }).catch(function () {});
     }
+  }
+
+  function closeObsModal() {
+    if (elements.obsModal) {
+      elements.obsModal.classList.add('hidden');
+    }
+  }
+
+  function copyOverlayUrl() {
+    openObsModal();
   }
 
   function applySubtitleFontSize() {
@@ -1048,14 +1177,12 @@
         opt.value = '';
         opt.textContent = 'Sin sesiones';
         elements.selectSession.appendChild(opt);
+        showSessionNotFoundUI('Sesión no encontrada :/', 'No hay ninguna sesión activa en este momento.');
         return;
       }
 
-      if (!currentSession && sessions.length > 0) {
-        currentSession = sessions[0].session_id.toLowerCase().trim();
-      }
-
       const currentNorm = (currentSession || '').toLowerCase().trim();
+      let sessionExists = false;
 
       sessions.forEach(s => {
         const sid = (s.session_id || '').toLowerCase().trim();
@@ -1063,10 +1190,20 @@
           const opt = document.createElement('option');
           opt.value = sid;
           opt.textContent = s.title || ('Sala ' + sid.charAt(0).toUpperCase() + sid.slice(1));
-          if (sid === currentNorm) opt.selected = true;
+          if (sid === currentNorm) {
+            opt.selected = true;
+            sessionExists = true;
+          }
           elements.selectSession.appendChild(opt);
         }
       });
+
+      if (currentSession && !sessionExists) {
+        // La sesión especificada en la URL no existe o fue eliminada
+        showSessionNotFoundUI('Sesión no encontrada :/', `La sesión "${currentSession}" fue eliminada o no existe.`);
+      } else if (!currentSession && sessions.length > 0) {
+        currentSession = sessions[0].session_id.toLowerCase().trim();
+      }
     } catch (e) {
       console.debug('Error al cargar sesiones:', e);
     }
@@ -1080,6 +1217,8 @@
     if (elements.selectSession) {
       elements.selectSession.addEventListener('change', function (e) {
         currentSession = e.target.value;
+        if (!currentSession) return;
+        hideSessionNotFoundUI();
         const url = new URL(window.location);
         url.searchParams.set('session', currentSession);
         window.history.replaceState({}, '', url);
@@ -1247,9 +1386,50 @@
         }
       });
     }
+
+    // Eventos para el Mini Cuadro de Enlace OBS
+    if (elements.btnObsClose) {
+      elements.btnObsClose.addEventListener('click', closeObsModal);
+    }
+    if (elements.btnObsCancel) {
+      elements.btnObsCancel.addEventListener('click', closeObsModal);
+    }
+    if (elements.btnObsCopy) {
+      elements.btnObsCopy.addEventListener('click', function () {
+        if (elements.obsUrlInput) {
+          elements.obsUrlInput.select();
+          const urlToCopy = elements.obsUrlInput.value;
+          const t = I18N[currentSiteLang] || I18N.es;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(urlToCopy).then(function () {
+              showToast(t.toastCopied);
+            });
+          }
+          if (elements.lblObsCopyBtn) {
+            elements.lblObsCopyBtn.textContent = t.obsModalCopied || '¡Copiado!';
+            setTimeout(function () {
+              elements.lblObsCopyBtn.textContent = t.obsModalCopy || 'Copiar Link';
+            }, 2000);
+          }
+        }
+      });
+    }
+    if (elements.obsModal) {
+      elements.obsModal.addEventListener('click', function (e) {
+        if (e.target === elements.obsModal) {
+          closeObsModal();
+        }
+      });
+    }
+
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && elements.authModal && !elements.authModal.classList.contains('hidden')) {
-        closeAuthModal();
+      if (e.key === 'Escape') {
+        if (elements.authModal && !elements.authModal.classList.contains('hidden')) {
+          closeAuthModal();
+        }
+        if (elements.obsModal && !elements.obsModal.classList.contains('hidden')) {
+          closeObsModal();
+        }
       }
     });
     if (elements.authForm) {
