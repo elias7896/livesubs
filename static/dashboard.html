@@ -79,28 +79,23 @@
       gap: 0.75rem;
     }
 
-    /* Circulo rojo parpadeante estilo EN VIVO */
+    /* Circulo rojo parpadeante estilo EN VIVO (encendido/apagado directo sin transicion) */
     .live-dot-red {
       width: 11px;
       height: 11px;
       border-radius: 50%;
       background-color: #ef4444;
-      box-shadow: 0 0 10px rgba(239, 68, 68, 0.9);
-      animation: pulse-red 1.6s infinite ease-in-out;
       display: inline-block;
       flex-shrink: 0;
+      animation: blink-step-red 1.8s infinite steps(1);
     }
 
-    @keyframes pulse-red {
-      0%, 100% {
+    @keyframes blink-step-red {
+      0%, 49.9% {
         opacity: 1;
-        transform: scale(1);
-        box-shadow: 0 0 10px rgba(239, 68, 68, 0.9);
       }
-      50% {
-        opacity: 0.35;
-        transform: scale(0.85);
-        box-shadow: 0 0 2px rgba(239, 68, 68, 0.3);
+      50%, 100% {
+        opacity: 0;
       }
     }
 
@@ -1985,6 +1980,7 @@
       const MAX_LATENCY_POINTS = 20;
       let latencyHistory = []; // { timeLabel, showLabel, tot, asr, trans, breakdown: [] }
       let lastLatencyTickTime = 0;
+      let latencyGraceUntil = Date.now() + 15000; // Chequeo inicial de 15 segundos al abrir el dashboard
 
       function initAnalyticsCharts() {
         if (typeof Chart === 'undefined') return;
@@ -2331,79 +2327,98 @@
         const filtered = sessions.filter(s => selectedSessionIds.has(s.session_id.toLowerCase().trim()));
 
         // 1. Gráfico de Líneas (Telemetría de Latencia)
+        // Ventana de 15 segundos: si no hay sesiones o están pausadas, chequear por 15s y luego quedar estático.
+        const targetListForLatency = (filtered.length > 0 ? filtered : sessions);
         const nowMs = Date.now();
-        const nowLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const showLabel = (!lastLatencyTickTime || (nowMs - lastLatencyTickTime >= 4800));
-        if (showLabel) {
-          lastLatencyTickTime = nowMs;
+
+        const hasActiveSessions = targetListForLatency.some(s => {
+          if (!s || s.status === 'closed') return false;
+          const isStale = (nowMs / 1000 - (s.last_activity || 0)) > 15;
+          const hasMetrics = s.metrics && (s.metrics.latency_ms > 0 || s.metrics.asr_ms > 0 || s.metrics.rpm > 0);
+          const isLive = s.status === 'live';
+          return (isLive || hasMetrics || !isStale);
+        });
+
+        if (hasActiveSessions) {
+          latencyGraceUntil = nowMs + 15000;
         }
 
-        let currentPoint = {
-          timeLabel: nowLabel,
-          showLabel: showLabel,
-          tot: 0,
-          asr: 0,
-          trans: 0,
-          breakdown: []
-        };
+        const shouldUpdateLatency = hasActiveSessions || (nowMs < latencyGraceUntil);
 
-        function getSessionMetrics(s) {
-          const isClosed = (s.status === 'closed');
-          const isSilent = (s.status === 'silent');
-          const isStale = (Date.now() / 1000 - (s.last_activity || 0)) > 15;
-          if (isClosed || isSilent || isStale) {
-            return { tot: 0, asr: 0, trans: 0 };
+        if (shouldUpdateLatency) {
+          const nowLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          const showLabel = (!lastLatencyTickTime || (nowMs - lastLatencyTickTime >= 4800));
+          if (showLabel) {
+            lastLatencyTickTime = nowMs;
           }
-          return {
-            tot: Math.round(s.metrics?.latency_ms || 0),
-            asr: Math.round(s.metrics?.asr_ms || 0),
-            trans: Math.round(s.metrics?.trans_ms || 0)
+
+          let currentPoint = {
+            timeLabel: nowLabel,
+            showLabel: showLabel,
+            tot: 0,
+            asr: 0,
+            trans: 0,
+            breakdown: []
           };
-        }
 
-        const activeFiltered = filtered.filter(s => s.status !== 'closed');
-
-        if (activeFiltered.length === 1) {
-          const s = activeFiltered[0];
-          const m = getSessionMetrics(s);
-          currentPoint.tot = m.tot;
-          currentPoint.asr = m.asr;
-          currentPoint.trans = m.trans;
-          currentPoint.breakdown = [{
-            id: s.session_id,
-            title: s.title || ('Sala ' + s.session_id),
-            tot: m.tot,
-            asr: m.asr,
-            trans: m.trans
-          }];
-        } else if (activeFiltered.length > 1) {
-          let sumTot = 0, sumAsr = 0, sumTrans = 0;
-          currentPoint.breakdown = activeFiltered.map(s => {
-            const m = getSessionMetrics(s);
-            sumTot += m.tot;
-            sumAsr += m.asr;
-            sumTrans += m.trans;
+          function getSessionMetrics(s) {
+            const isClosed = (s.status === 'closed');
+            const isSilent = (s.status === 'silent');
+            const isStale = (Date.now() / 1000 - (s.last_activity || 0)) > 15;
+            if (isClosed || isSilent || isStale) {
+              return { tot: 0, asr: 0, trans: 0 };
+            }
             return {
+              tot: Math.round(s.metrics?.latency_ms || 0),
+              asr: Math.round(s.metrics?.asr_ms || 0),
+              trans: Math.round(s.metrics?.trans_ms || 0)
+            };
+          }
+
+          const activeFiltered = filtered.filter(s => s.status !== 'closed');
+
+          if (activeFiltered.length === 1) {
+            const s = activeFiltered[0];
+            const m = getSessionMetrics(s);
+            currentPoint.tot = m.tot;
+            currentPoint.asr = m.asr;
+            currentPoint.trans = m.trans;
+            currentPoint.breakdown = [{
               id: s.session_id,
               title: s.title || ('Sala ' + s.session_id),
-              tot: m.tot, asr: m.asr, trans: m.trans
-            };
-          });
-          currentPoint.tot = Math.round(sumTot / activeFiltered.length);
-          currentPoint.asr = Math.round(sumAsr / activeFiltered.length);
-          currentPoint.trans = Math.round(sumTrans / activeFiltered.length);
-        }
+              tot: m.tot,
+              asr: m.asr,
+              trans: m.trans
+            }];
+          } else if (activeFiltered.length > 1) {
+            let sumTot = 0, sumAsr = 0, sumTrans = 0;
+            currentPoint.breakdown = activeFiltered.map(s => {
+              const m = getSessionMetrics(s);
+              sumTot += m.tot;
+              sumAsr += m.asr;
+              sumTrans += m.trans;
+              return {
+                id: s.session_id,
+                title: s.title || ('Sala ' + s.session_id),
+                tot: m.tot, asr: m.asr, trans: m.trans
+              };
+            });
+            currentPoint.tot = Math.round(sumTot / activeFiltered.length);
+            currentPoint.asr = Math.round(sumAsr / activeFiltered.length);
+            currentPoint.trans = Math.round(sumTrans / activeFiltered.length);
+          }
 
-        latencyHistory.push(currentPoint);
-        if (latencyHistory.length > MAX_LATENCY_POINTS) {
-          latencyHistory.shift();
-        }
+          latencyHistory.push(currentPoint);
+          if (latencyHistory.length > MAX_LATENCY_POINTS) {
+            latencyHistory.shift();
+          }
 
-        chartLatencyInstance.data.labels = latencyHistory.map(h => h.timeLabel);
-        chartLatencyInstance.data.datasets[0].data = latencyHistory.map(h => h.tot);
-        chartLatencyInstance.data.datasets[1].data = latencyHistory.map(h => h.asr);
-        chartLatencyInstance.data.datasets[2].data = latencyHistory.map(h => h.trans);
-        chartLatencyInstance.update('none');
+          chartLatencyInstance.data.labels = latencyHistory.map(h => h.timeLabel);
+          chartLatencyInstance.data.datasets[0].data = latencyHistory.map(h => h.tot);
+          chartLatencyInstance.data.datasets[1].data = latencyHistory.map(h => h.asr);
+          chartLatencyInstance.data.datasets[2].data = latencyHistory.map(h => h.trans);
+          chartLatencyInstance.update('none');
+        }
 
         // 2. Gráfico de Barras (Consumo de Audio por Sesión - Solo transmisiones activas)
         const targetList = (filtered.length > 0 ? filtered : sessions).filter(s => s.status !== 'closed');
@@ -3107,6 +3122,7 @@
       // Pausar / Reanudar Sesion (Pasa entre Activa e Inactiva)
       // -----------------------------------------------------------------------
       window.toggleSessionPause = async function (sessionId, isCurrentlyInactive) {
+        latencyGraceUntil = Date.now() + 15000;
         const t = I18N[currentSiteLang] || I18N.es;
         const sidLower = sessionId.toLowerCase().trim();
         const nextInactive = !isCurrentlyInactive;
@@ -3189,6 +3205,7 @@
       // Eliminar Sesion Permanentemente (Boton Trash)
       // -----------------------------------------------------------------------
       window.deleteSession = async function (sessionId) {
+        latencyGraceUntil = Date.now() + 15000;
         const t = I18N[currentSiteLang] || I18N.es;
         if (!confirm(t.confirmDelete.replace('{id}', sessionId))) return;
         try {
@@ -3365,6 +3382,7 @@
           closeAddSessionModal();
           showToast(streamUrl ? `Transmisión conectando a stream: ${sessionId}` : t.modalSuccessCreated);
           selectedSessionIds.add(sessionId);
+          latencyGraceUntil = Date.now() + 15000;
           fetchTelemetry();
         } catch (err) {
           elements.modalErrorMsg.textContent = `Error de conexión: ${err.message}`;

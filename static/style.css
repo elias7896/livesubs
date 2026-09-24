@@ -65,14 +65,14 @@ body.mode-reader {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.1rem;
 }
 
 .live-dot-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 1.25rem;
+  margin-right: -0.35rem;
 }
 
 .status-dot {
@@ -80,36 +80,32 @@ body.mode-reader {
   height: 14px;
   border-radius: 50%;
   display: inline-block;
-  transition: var(--transition-smooth);
+  transition: none !important;
 }
 
 .status-dot.connected {
-  background-color: #ffffff;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.95);
-  animation: pulse-live 1.8s infinite ease-in-out;
+  background-color: #ffffff !important;
+  box-shadow: none !important;
+  animation: blink-step 1.8s infinite steps(1) !important;
 }
 
 .status-dot.reconnecting {
-  background-color: transparent;
-  border: 2px solid #a1a1aa;
-  animation: pulse-live 1.2s infinite ease-in-out;
+  background-color: transparent !important;
+  border: 2px solid #a1a1aa !important;
+  animation: blink-step 1.8s infinite steps(1) !important;
 }
 
 .status-dot.disconnected {
-  background-color: transparent;
-  border: 2px solid #52525b;
+  background-color: transparent !important;
+  border: 2px solid #52525b !important;
 }
 
-@keyframes pulse-live {
-  0%, 100% {
+@keyframes blink-step {
+  0%, 49.9% {
     opacity: 1;
-    transform: scale(1);
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.95), 0 0 4px rgba(255, 255, 255, 0.8);
   }
-  50% {
-    opacity: 0.35;
-    transform: scale(0.82);
-    box-shadow: 0 0 3px rgba(255, 255, 255, 0.2);
+  50%, 100% {
+    opacity: 0;
   }
 }
 
@@ -804,30 +800,17 @@ body.theme-light .btn-highlight:hover {
 
 body.theme-light .status-dot.connected {
   background-color: #000000;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
-  animation: pulse-live-light 1.8s infinite ease-in-out;
+  box-shadow: none;
+  animation: blink-step 1.8s infinite steps(1);
 }
 
 body.theme-light .status-dot.reconnecting {
   border-color: #6e6e73;
-  animation: pulse-live-light 1.2s infinite ease-in-out;
+  animation: blink-step 1.8s infinite steps(1);
 }
 
 body.theme-light .status-dot.disconnected {
   border-color: #6e6e73;
-}
-
-@keyframes pulse-live-light {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.5), 0 0 2px rgba(0, 0, 0, 0.3);
-  }
-  50% {
-    opacity: 0.3;
-    transform: scale(0.82);
-    box-shadow: 0 0 2px rgba(0, 0, 0, 0.1);
-  }
 }
 
 body.theme-light .btn-resume-scroll {
