@@ -154,13 +154,64 @@ El sistema admite cualquier combinación entre **Inglés (EN)**, **Español (ES)
 
 ---
 
-## Glosario de Jerga Técnica y Slang (Domain Bias)
+## Glosario y Sesgo de Dominio (Domain Bias & Glossary)
 
-Para evitar que términos técnicos de programación, cloud y streaming se transcriban o traduzcan erróneamente (ej. traducir *pipeline* por *tubería* o confundir *Kubernetes* fonéticamente):
+El sistema integra un mecanismo de **Domain Biasing** de dos etapas que garantiza que nombres propios, siglas complejas, marcas y jerga especializada se transcriban y traduzcan con máxima precisión sin deformaciones fonéticas ni traducciones literales no deseadas.
 
-1. Edita el archivo local [`glossary.txt`](glossary.txt) añadiendo tus palabras clave separadas por coma o por línea.
-2. **ASR Biasing:** El worker inyecta automáticamente estos términos en el parámetro `prompt` de Whisper, condicionando la probabilidad fonética del decodificador.
-3. **LLM Preservation:** El system prompt de LLaMA ordena explícitamente conservar intacta la terminología estándar en inglés (*pipeline, commit, merge, deploy, middleware, pull request, frontend, backend*).
+### ¿Cómo funciona internamente?
+
+1. **Sesgo Fonético en Whisper (ASR Biasing)**:
+   - Whisper recibe los términos del glosario a través de su parámetro `prompt`.
+   - Esto condiciona la matriz de probabilidades del decodificador acústico: si el audio contiene una palabra fonéticamente ambigua o con acento regional marcado, el modelo favorece los términos cargados en el glosario en lugar de confundirlos con palabras genéricas similares.
+   - El worker utiliza un **pool rotativo dinámico**: mantiene los 20 términos más prioritarios fijos en cada fragmento e intercala muestras rotativas del resto para cubrir vocabularios de cientos de palabras sin exceder el límite de tokens de Whisper.
+
+2. **Preservación Semántica en el Traductor (LLM Preservation)**:
+   - El modelo de traducción (LLM) recibe directrices estrictas para preservar la terminología oficial, tecnologías, acrónimos y entidades sin traducirlas literalmente al español (ej. mantener *pipeline, backend, deploy, commit* en su forma estándar de la industria en vez de traducirlos como *tubería* o *desplegar*).
+
+### ¿Cómo personalizar el glosario según tu transmisión?
+
+Puedes adaptar el glosario a cualquier temática simplemente editando el archivo [`glossary.txt`](glossary.txt) o creando archivos separados para cada tipo de evento:
+
+#### Ejemplos de uso por temática:
+
+- **Programación & Cloud (por defecto)**:
+  ```text
+  Kubernetes, Docker, Postgres, AWS, Dijkstra, FastAPI, CI/CD, Pull Request, Commit, Refactor
+  ```
+
+- **Noticias, Política & Actualidad**:
+  ```text
+  DNU, AFIP, ARCA, INDEC, Balotaje, Casa Rosada, Plaza de Mayo, Francos, Milei, Kicillof, Caputo
+  ```
+
+- **Deportes & Fútbol**:
+  ```text
+  Scaloneta, Bombonera, Monumental, VAR, Offside, Hat-trick, Premier League, Libertadores, Conmebol
+  ```
+
+- **Medicina o Finanzas**:
+  ```text
+  Nasdaq, S&P 500, Yield, Fintech, Bullish, Bearish, Cripto, Blockchain, Resonancia, Hemoglobina
+  ```
+
+### Formas de Configuración:
+
+1. **Vía archivo local (`glossary.txt`)**:
+   Añade tus términos separados por comas o por líneas en `glossary.txt`. El worker los cargará automáticamente al arrancar.
+
+2. **Vía variables de entorno (`.env`)**:
+   ```env
+   # Ruta a un archivo alternativo
+   GLOSSARY_FILE=glosarios/noticias.txt
+
+   # O inyección rápida de términos directos separados por comas:
+   GLOSSARY_TERMS=Valkey,Kubernetes,OpenAI,DeepMind
+   ```
+
+3. **Vía línea de comandos (CLI)**:
+   ```bash
+   ./venv/bin/python worker.py --glossary glosarios/deportes.txt --stream-url "https://..."
+   ```
 
 ---
 

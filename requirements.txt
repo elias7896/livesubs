@@ -10,3 +10,8 @@ groq>=0.9.0
 onnxruntime>=1.17.0
 sounddevice>=0.4.6
 numpy>=1.26.0
+
+# Remote Streaming Ingestion (YouTube, Twitch, Kick, HLS)
+yt-dlp>=2024.0.0
+static-ffmpeg>=2.5
+imageio-ffmpeg>=0.4.9

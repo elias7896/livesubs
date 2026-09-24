@@ -12,6 +12,7 @@ import json
 import logging
 import os
 import sqlite3
+import re
 import subprocess
 import sys
 import time
@@ -73,12 +74,13 @@ VALKEY_PORT = int(os.getenv("VALKEY_PORT", "6379"))
 VALKEY_CHANNEL = os.getenv("VALKEY_CHANNEL", "subtitles:live")
 VALKEY_HISTORY_KEY = os.getenv("VALKEY_HISTORY_KEY", "subtitles:history")
 
-CHUNK_SECONDS = float(os.getenv("CHUNK_SECONDS", "3.5"))
+CHUNK_SECONDS = float(os.getenv("CHUNK_SECONDS", "4.0"))
+MAX_CHUNK_SECONDS = float(os.getenv("MAX_CHUNK_SECONDS", "5.4"))
 SAMPLE_RATE = int(os.getenv("SAMPLE_RATE", "16000"))
 VAD_MODEL_PATH = os.getenv("VAD_MODEL_PATH", os.path.join(_current_dir, "silero_vad.onnx"))
 SILERO_VAD_URL = "https://raw.githubusercontent.com/snakers4/silero-vad/master/src/silero_vad/data/silero_vad.onnx"
 
-GROQ_ASR_MODEL = os.getenv("GROQ_ASR_MODEL", "whisper-large-v3")
+GROQ_ASR_MODEL = os.getenv("GROQ_ASR_MODEL", "whisper-large-v3-turbo")
 GROQ_CHAT_MODEL = os.getenv("GROQ_CHAT_MODEL", "llama-3.3-70b-versatile")
 GROQ_FALLBACK_CHAT_MODEL = os.getenv("GROQ_FALLBACK_CHAT_MODEL", "llama-3.1-8b-instant")
 
@@ -238,6 +240,43 @@ def float32_to_wav_bytes(audio_data: np.ndarray, sample_rate: int = SAMPLE_RATE)
         wf.setframerate(sample_rate)
         wf.writeframes(audio_int16.tobytes())
     return wav_buf.getvalue()
+
+
+def deduplicate_repetitions(text: str) -> str:
+    """
+    Elimina bucles de repetición y frases idénticas consecutivas generadas por Whisper.
+    Ejemplo: 'deporte, personas vinculadas al mundo del deporte, personas vinculadas al mundo del deporte'
+    -> 'deporte, personas vinculadas al mundo del deporte'
+    """
+    if not text or len(text) < 6:
+        return text
+
+    # 1. Deduplicar cláusulas repetidas separadas por signos de puntuación
+    clauses = [c.strip() for c in re.split(r'[,;.]+', text) if c.strip()]
+    if len(clauses) >= 2:
+        new_clauses = [clauses[0]]
+        for c in clauses[1:]:
+            if c.lower() != new_clauses[-1].lower():
+                new_clauses.append(c)
+        if len(new_clauses) < len(clauses):
+            text = ', '.join(new_clauses)
+
+    # 2. Deduplicar n-gramas repetidos (secuencias de 1 a 10 palabras consecutivas)
+    words = text.split()
+    for n in range(min(10, len(words) // 2), 0, -1):
+        i = 0
+        cleaned = []
+        while i < len(words):
+            chunk = [re.sub(r'[^\w]', '', w.lower()) for w in words[i:i+n]]
+            next_chunk = [re.sub(r'[^\w]', '', w.lower()) for w in words[i+n:i+2*n]]
+            if len(chunk) == n and chunk == next_chunk:
+                i += n
+            else:
+                cleaned.append(words[i])
+                i += 1
+        words = cleaned
+
+    return " ".join(words).strip()
 
 
 class ValkeyPublisher:
@@ -401,14 +440,7 @@ class SubtitlePipeline:
 
         asr_prompt = ", ".join(glossary_slice)
 
-        prompt_parts = []
-        if asr_prompt:
-            prompt_parts.append(asr_prompt)
-        if self.last_transcription:
-            clean_prev = self.last_transcription.strip()
-            if clean_prev:
-                prompt_parts.append(f"... {clean_prev[-160:]}")
-        dynamic_prompt = ". ".join(prompt_parts)
+        dynamic_prompt = asr_prompt
         if len(dynamic_prompt) > 850:
             dynamic_prompt = dynamic_prompt[:850]
 
@@ -470,7 +502,7 @@ class SubtitlePipeline:
             f"Translate the current incoming speech accurately, naturally, and concisely into: {needed_desc}. "
             "GUIDELINES:\n"
             "1. If previous context is provided, use it to ensure grammatical coherence, pronoun resolution, and gender agreement.\n"
-            "2. If the current text contains an obvious minor phonetic transcription error or cut word from speech recognition, translate the intended meaning rather than literal nonsense.\n"
+            "2. Translate faithfully and accurately to what was said without inventing extra facts, hallucinations, or adding commentary.\n"
             "3. Preserve technical, cloud, AI, and industry terms in standard industry terminology.\n"
             "4. Preserve proper names of people, companies, tech brands, and databases (e.g., Dijkstra, Turing, AWS, SQLite, Postgres, OpenAI) intact without translating or altering them.\n"
             f"5. Output MUST be valid JSON with keys: {{{keys_example}}}. Output ONLY valid JSON without markdown fences or explanations."
@@ -479,8 +511,8 @@ class SubtitlePipeline:
         user_content = text_source
         if self.last_transcription:
             clean_prev = self.last_transcription.strip()
-            if clean_prev:
-                user_content = f"[Previous context: {clean_prev[-160:]}]\n[Current speech to translate: {text_source}]"
+            if clean_prev and clean_prev.lower() != text_source.lower():
+                user_content = f"[Previous context: {clean_prev[-120:]}]\n[Current speech to translate: {text_source}]"
 
         models_to_try = [self.chat_model]
         if not self._fallback_active and GROQ_FALLBACK_CHAT_MODEL != self.chat_model:
@@ -615,9 +647,12 @@ class AudioWorker:
         self.consecutive_silent_frames = 0
 
         frames_per_sec = SAMPLE_RATE / VAD_WINDOW_SIZE  # 31.25 fps
-        self.max_frames = int(CHUNK_SECONDS * frames_per_sec)
+        self.target_frames = int(CHUNK_SECONDS * frames_per_sec)
+        self.max_elastic_frames = int(MAX_CHUNK_SECONDS * frames_per_sec)
+        self.max_frames = self.target_frames
         self.min_speech_frames = int(MIN_SPEECH_DURATION * frames_per_sec)
         self.pause_silence_frames = int(PAUSE_SILENCE_SECONDS * frames_per_sec)
+        self.micro_pause_frames = max(3, int(0.16 * frames_per_sec))  # ~160ms micro-pausa entre palabras
 
         self.request_timestamps = deque()
         self.rpm_lock = threading.Lock()
@@ -699,10 +734,19 @@ class AudioWorker:
                 text_source, detected_lang = self.pipeline.transcribe(wav_bytes)
                 asr_lat_ms = (time.time() - t_asr_start) * 1000
 
-                clean_source = text_source.strip()
+                clean_source = deduplicate_repetitions(text_source.strip())
                 hallucinations = {"you", "thank you.", "thank you", "thanks for watching.", "thanks for watching", ".", "..."}
                 if not clean_source or len(clean_source) < 2 or clean_source.lower() in hallucinations:
                     continue
+
+                # Evitar publicar fragmentos idénticos consecutivos generados por alucinación de Whisper
+                prev_text = getattr(self.pipeline, "last_transcription", "") or ""
+                if prev_text:
+                    c_norm = re.sub(r"[^\w]", "", clean_source.lower())
+                    p_norm = re.sub(r"[^\w]", "", prev_text.lower())
+                    if c_norm and c_norm == p_norm:
+                        logger.info(f"Descartando transcripción duplicada consecutiva de Whisper: '{clean_source}'")
+                        continue
 
                 # Actualizar memoria de contexto continuo para el siguiente fragmento
                 self.pipeline.last_transcription = clean_source
@@ -790,16 +834,23 @@ class AudioWorker:
             self.accumulated_frames.append(frame)
             self.consecutive_silent_frames = 0
 
-            if len(self.accumulated_frames) >= self.max_frames:
+            # Límite elástico absoluto: solo cortar si alcanzamos el techo máximo permitido
+            if len(self.accumulated_frames) >= self.max_elastic_frames:
                 self._emit_current_chunk()
         else:
             if self.in_speech:
                 self.consecutive_silent_frames += 1
                 self.accumulated_frames.append(frame)
 
+                curr_len = len(self.accumulated_frames)
+                # 1. Si hubo una pausa natural completa de habla (ej. 0.8s), emitir
                 if self.consecutive_silent_frames >= self.pause_silence_frames:
                     self._emit_current_chunk()
-                elif len(self.accumulated_frames) >= self.max_frames:
+                # 2. Corte elástico: si superamos la duración objetivo (~4.0s) y hay una micro-pausa entre palabras (~160ms), emitir
+                elif curr_len >= self.target_frames and self.consecutive_silent_frames >= self.micro_pause_frames:
+                    self._emit_current_chunk()
+                # 3. Límite elástico absoluto de seguridad
+                elif curr_len >= self.max_elastic_frames:
                     self._emit_current_chunk()
             else:
                 self.preroll.append(frame)
@@ -854,7 +905,11 @@ class AudioWorker:
 
         # Determinar ejecutable de FFmpeg
         import shutil
-        ffmpeg_exe = shutil.which("ffmpeg")
+        venv_ffmpeg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "venv", "bin", "ffmpeg")
+        if os.path.exists(venv_ffmpeg) and os.access(venv_ffmpeg, os.X_OK):
+            ffmpeg_exe = venv_ffmpeg
+        else:
+            ffmpeg_exe = shutil.which("ffmpeg")
         if not ffmpeg_exe:
             try:
                 import static_ffmpeg
@@ -863,11 +918,7 @@ class AudioWorker:
             except Exception:
                 pass
         if not ffmpeg_exe:
-            try:
-                import imageio_ffmpeg
-                ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
-            except Exception:
-                ffmpeg_exe = "ffmpeg"
+            ffmpeg_exe = "ffmpeg"
 
         target_url = stream_url
         is_live = False
@@ -972,6 +1023,27 @@ class AudioWorker:
             bufsize=10**6
         )
 
+        stderr_lines = deque(maxlen=30)
+
+        def _drain_stderr(pipe):
+            try:
+                for line in iter(pipe.readline, b""):
+                    if not line:
+                        break
+                    dec = line.decode("utf-8", errors="replace").strip()
+                    if dec:
+                        stderr_lines.append(dec)
+            except Exception:
+                pass
+            finally:
+                try:
+                    pipe.close()
+                except Exception:
+                    pass
+
+        stderr_thread = threading.Thread(target=_drain_stderr, args=(proc.stderr,), daemon=True)
+        stderr_thread.start()
+
         bytes_per_frame = VAD_WINDOW_SIZE * 2  # 512 muestras * 2 bytes = 1024 bytes
         frame_count = 0
         start_decode_time = time.time()
@@ -983,8 +1055,8 @@ class AudioWorker:
                     if proc.poll() is not None:
                         exit_code = proc.poll()
                         if exit_code != 0:
-                            err_msg = proc.stderr.read().decode(errors="replace") if proc.stderr else ""
-                            logger.warning(f"FFmpeg finalizó con código {exit_code}: {err_msg.strip()[-300:]}")
+                            err_msg = "\n".join(stderr_lines)
+                            logger.warning(f"FFmpeg finalizó con código {exit_code}: {err_msg[-300:]}")
                         else:
                             logger.info("Flujo del stream o video finalizado normalmente.")
                         break
@@ -992,12 +1064,15 @@ class AudioWorker:
                     continue
 
                 frame_count += 1
-                if not is_live:
-                    # Garantizar ritmo de reproducción en tiempo real 1.0x estricto
-                    target_wall_time = start_decode_time + (frame_count * (VAD_WINDOW_SIZE / SAMPLE_RATE))
-                    delay = target_wall_time - time.time()
-                    if delay > 0:
-                        time.sleep(delay)
+                # Garantizar ritmo en tiempo real 1.0x para evitar saturar Groq con ráfagas iniciales de HLS
+                target_wall_time = start_decode_time + (frame_count * (VAD_WINDOW_SIZE / SAMPLE_RATE))
+                delay = target_wall_time - time.time()
+                if delay > 0:
+                    time.sleep(delay)
+                elif is_live and delay < -1.5:
+                    # En livestreams, si hubo retraso por red o buffer inicial,
+                    # resincronizar el reloj base para mantener el ritmo en vivo
+                    start_decode_time = time.time() - (frame_count * (VAD_WINDOW_SIZE / SAMPLE_RATE))
 
                 data_int16 = np.frombuffer(raw_bytes, dtype=np.int16)
                 data_float32 = data_int16.astype(np.float32) / 32768.0
@@ -1006,6 +1081,11 @@ class AudioWorker:
         except KeyboardInterrupt:
             logger.info("Detención manual solicitada por el usuario.")
         finally:
+            try:
+                if proc.stdout:
+                    proc.stdout.close()
+            except Exception:
+                pass
             try:
                 proc.terminate()
                 proc.wait(timeout=2)
