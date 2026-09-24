@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Subtitulos en Vivo | Live Translation</title>
-  <link rel="stylesheet" href="/static/style.css?v=20260924_7">
+  <title>Subtítulos en Vivo | Live Translation</title>
+  <link rel="stylesheet" href="/static/style.css?v=20260924_8">
   <style>
     .header-left {
       gap: 1.1rem !important;
@@ -58,15 +58,15 @@
         <span id="status-dot" class="status-dot connected"></span>
       </span>
 
-      <!-- Selector de Sala / Sesion -->
-      <div class="slicer-item" title="Seleccionar sala o sesion">
-        <span id="lbl-prefix-session" class="slicer-prefix">Sesion
+      <!-- Selector de Sala / Sesión -->
+      <div class="slicer-item" title="Seleccionar sala o sesión">
+        <span id="lbl-prefix-session" class="slicer-prefix">Sesión
           <svg class="slicer-arrow-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="5" y1="12" x2="19" y2="12"></line>
             <polyline points="12 5 19 12 12 19"></polyline>
           </svg>
         </span>
-        <select id="select-session" class="select-control" aria-label="Seleccionar sala o sesion">
+        <select id="select-session" class="select-control" aria-label="Seleccionar sala o sesión">
         </select>
       </div>
 
@@ -120,17 +120,17 @@
       </button>
 
       <!-- Boton para ir hacia abajo de todo -->
-      <button id="btn-scroll-bottom" class="btn-control" title="Ir al final de la pagina" aria-label="Bajar al final">
+      <button id="btn-scroll-bottom" class="btn-control" title="Ir al final de la página" aria-label="Bajar al final">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <line x1="12" y1="5" x2="12" y2="19"></line>
           <polyline points="19 12 12 19 5 12"></polyline>
         </svg>
       </button>
 
-      <!-- Ajuste de tamano de fuente de subtitulos -->
-      <div id="font-size-controls" class="font-size-controls" title="Ajustar tamano de subtitulos">
-        <button id="btn-font-dec" class="btn-icon-only" aria-label="Disminuir tamano de subtitulos">-</button>
-        <button id="btn-font-inc" class="btn-icon-only" aria-label="Aumentar tamano de subtitulos">+</button>
+      <!-- Ajuste de tamaño de fuente de subtítulos -->
+      <div id="font-size-controls" class="font-size-controls" title="Ajustar tamaño de subtítulos">
+        <button id="btn-font-dec" class="btn-icon-only" aria-label="Disminuir tamaño de subtítulos">-</button>
+        <button id="btn-font-inc" class="btn-icon-only" aria-label="Aumentar tamaño de subtítulos">+</button>
       </div>
 
       <!-- Alternar a Fullscreen -->
@@ -187,6 +187,13 @@
       <button id="btn-fullscreen-font-dec" class="btn-icon-only" aria-label="Disminuir tamaño de subtítulos">-</button>
       <button id="btn-fullscreen-font-inc" class="btn-icon-only" aria-label="Aumentar tamaño de subtítulos">+</button>
     </div>
+    <!-- Boton para ir hacia abajo de todo en Fullscreen -->
+    <button id="btn-fullscreen-scroll-bottom" class="btn-control btn-icon-ctrl" title="Ir al final de la página" aria-label="Bajar al final">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <polyline points="19 12 12 19 5 12"></polyline>
+      </svg>
+    </button>
   </div>
 
   <!-- Contenedor Principal de Subtitulos -->
@@ -194,8 +201,8 @@
     <!-- Mensaje de estado inicial cuando no hay subtitulos -->
     <div id="empty-state" class="empty-state">
       <div class="empty-spinner"></div>
-      <p id="empty-title" class="empty-title">Esperando subtitulos de la transmision...</p>
-      <p id="empty-subtitle" class="empty-subtitle">Las frases apareceran aqui en tiempo real segun el par de idiomas seleccionado.</p>
+      <p id="empty-title" class="empty-title">Esperando subtítulos de la transmisión...</p>
+      <p id="empty-subtitle" class="empty-subtitle">Las frases aparecerán aquí en tiempo real según el par de idiomas seleccionado.</p>
     </div>
 
     <!-- Lista dinamica de subtitulos -->
@@ -203,8 +210,8 @@
   </main>
 
   <!-- Boton flotante para reanudar auto-scroll si el usuario subio manualmente -->
-  <button id="btn-resume-scroll" class="btn-resume-scroll hidden" aria-label="Bajar a los subtitulos mas recientes">
-    <span id="lbl-resume-scroll">Nuevos subtitulos</span>
+  <button id="btn-resume-scroll" class="btn-resume-scroll hidden" aria-label="Bajar a los subtítulos más recientes">
+    <span id="lbl-resume-scroll">Nuevos subtítulos</span>
   </button>
 
   <!-- Modal de Autenticacion para Admin Settings / Control Room -->
@@ -232,6 +239,6 @@
   <div id="toast" class="toast hidden"></div>
 
   <!-- Scripts -->
-  <script src="/static/app.js?v=20260920_5"></script>
+  <script src="/static/app.js?v=20260924_8"></script>
 </body>
 </html>

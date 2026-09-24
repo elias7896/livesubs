@@ -350,12 +350,14 @@ body.mode-reader {
   width: 100%;
 }
 
-/* Tarjeta individual de subtitulo */
+/* Tarjeta individual de subtitulo (Sin background) */
 .subtitle-card {
-  background-color: var(--bg-surface);
+  background-color: transparent !important;
+  background: transparent !important;
   border: none !important;
+  box-shadow: none !important;
   border-radius: 6px;
-  padding: 1.15rem 1.4rem;
+  padding: 0.85rem 0.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
@@ -365,7 +367,9 @@ body.mode-reader {
 
 .subtitle-card:hover {
   border-color: transparent !important;
-  background-color: var(--bg-surface-hover);
+  background-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .subtitle-meta {
@@ -722,13 +726,17 @@ body.theme-light .subtitles-container::-webkit-scrollbar-thumb {
 }
 
 body.theme-light .subtitle-card {
-  background-color: #f8fafc;
+  background-color: transparent !important;
+  background: transparent !important;
   border: none !important;
+  box-shadow: none !important;
 }
 
 body.theme-light .subtitle-card:hover {
-  background-color: #f1f5f9;
+  background-color: transparent !important;
+  background: transparent !important;
   border-color: transparent !important;
+  box-shadow: none !important;
 }
 
 body.theme-light .subtitle-target {
@@ -877,6 +885,11 @@ body.theme-light .modal-close-btn:hover {
    ========================================================================== */
 body.mode-fullscreen,
 body.mode-overlay {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
   background-color: var(--bg-main, #09090b) !important;
   background: var(--bg-main, #09090b) !important;
   overflow: hidden !important;
@@ -1003,12 +1016,17 @@ body.mode-overlay.theme-light .fullscreen-font-controls .btn-icon-only:hover {
 
 body.mode-fullscreen .subtitles-container,
 body.mode-overlay .subtitles-container {
-  padding: 4.5rem 4vw 4vh 4vw;
+  flex: 1 1 0% !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 100vh !important;
+  box-sizing: border-box !important;
+  padding: 5rem 4vw 4vh 4vw;
   display: flex;
   flex-direction: column;
   align-items: center;
   overflow-y: auto !important;
-  overflow-x: hidden;
+  overflow-x: hidden !important;
   scroll-behavior: smooth;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
@@ -1045,7 +1063,8 @@ body.mode-overlay .subtitles-list {
   flex-direction: column;
   gap: 1.25rem;
   align-items: center;
-  margin: auto auto; /* Inicia en el centro de la pantalla y se expande */
+  margin: auto auto; /* Inicia en el centro de la pantalla y cuando se llena permite scroll */
+  padding-bottom: 3.5rem;
 }
 
 /* Tarjeta en modo Fullscreen (Sin bordes, fondo limpio) */

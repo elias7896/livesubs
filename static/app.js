@@ -42,7 +42,9 @@
     btnFullscreenFontInc: document.getElementById('btn-fullscreen-font-inc'),
     btnFullscreenFontDec: document.getElementById('btn-fullscreen-font-dec'),
     fontSizeControls: document.getElementById('font-size-controls'),
+    fullscreenFontControls: document.getElementById('fullscreen-font-controls'),
     btnScrollBottom: document.getElementById('btn-scroll-bottom'),
+    btnFullscreenScrollBottom: document.getElementById('btn-fullscreen-scroll-bottom'),
     btnToggleTheme: document.getElementById('btn-toggle-theme'),
     lblThemeState: document.getElementById('lbl-theme-state'),
     siteLangContainer: document.getElementById('site-lang-container'),
@@ -66,8 +68,8 @@
   // -------------------------------------------------------------------------
   const I18N = {
     es: {
-      siteTitle: 'Subtitulos en Vivo | Live Translation',
-      sessionPrefix: 'Sesion',
+      siteTitle: 'Subtítulos en Vivo | Live Translation',
+      sessionPrefix: 'Sesión',
       langPrefix: 'Idioma',
       sourceLabel: 'Lenguaje original:',
       scrollLabel: 'Auto-scroll:',
@@ -76,8 +78,8 @@
       themeTitle: 'Alternar entre modo claro y oscuro',
       sourceTitle: 'Mostrar u ocultar audio original',
       scrollTitle: 'Pausar o activar auto-scroll',
-      scrollBottomTitle: 'Ir al final de la pagina',
-      fontSizeTitle: 'Ajustar tamano de subtitulos',
+      scrollBottomTitle: 'Ir al final de la página',
+      fontSizeTitle: 'Ajustar tamaño de subtítulos',
       modeOverlay: 'Fullscreen',
       modeReader: 'Fullscreen',
       modeTitle: 'Alternar a Fullscreen',
@@ -86,9 +88,9 @@
       adminSettings: 'Admin Settings',
       adminTitle: 'Panel de Control y Monitoreo',
       siteLangTitle: 'Idioma del sitio',
-      emptyTitle: 'Esperando subtitulos de la transmision...',
-      emptySubtitle: 'Las frases apareceran aqui en tiempo real segun el par de idiomas seleccionado.',
-      newSubtitles: 'Nuevos subtitulos',
+      emptyTitle: 'Esperando subtítulos de la transmisión...',
+      emptySubtitle: 'Las frases aparecerán aquí en tiempo real según el par de idiomas seleccionado.',
+      newSubtitles: 'Nuevos subtítulos',
       toastCopied: 'URL de OBS copiada al portapapeles',
       toastCopyError: 'Error al copiar URL',
       authTitle: 'Acceso Administrativo',
@@ -410,7 +412,9 @@
     if (elements.btnToggleScroll) elements.btnToggleScroll.title = t.scrollTitle;
 
     if (elements.btnScrollBottom) elements.btnScrollBottom.title = t.scrollBottomTitle;
+    if (elements.btnFullscreenScrollBottom) elements.btnFullscreenScrollBottom.title = t.scrollBottomTitle;
     if (elements.fontSizeControls) elements.fontSizeControls.title = t.fontSizeTitle;
+    if (elements.fullscreenFontControls) elements.fullscreenFontControls.title = t.fontSizeTitle;
 
     if (elements.lblModeToggle) {
       elements.lblModeToggle.textContent = isOverlayMode ? t.modeReader : t.modeOverlay;
@@ -1184,9 +1188,20 @@
       elements.btnFullscreenFontDec.addEventListener('click', function () { adjustFullscreenFontSize(-0.15); });
     }
 
-    // Ir hacia abajo de todo (Boton V)
+    // Ir hacia abajo de todo (Boton V en pantalla principal)
     if (elements.btnScrollBottom) {
       elements.btnScrollBottom.addEventListener('click', function () {
+        isAutoScrollEnabled = true;
+        updateAutoScrollUI();
+        scrollToBottom(true);
+      });
+    }
+
+    // Ir hacia abajo de todo (Boton V en Fullscreen)
+    if (elements.btnFullscreenScrollBottom) {
+      elements.btnFullscreenScrollBottom.addEventListener('click', function () {
+        isAutoScrollEnabled = true;
+        updateAutoScrollUI();
         scrollToBottom(true);
       });
     }
