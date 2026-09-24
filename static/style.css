@@ -381,14 +381,17 @@ body.mode-reader {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   color: var(--text-time);
   width: 100%;
 }
 
 .subtitle-time {
   font-family: var(--font-ui);
+  font-size: 0.65rem;
   font-weight: 500;
+  opacity: 0.85;
+  letter-spacing: 0.02em;
 }
 
 /* Ocultar latencia ms de la vista del usuario en el lector (preservada en background para produccion) */
@@ -495,8 +498,17 @@ body.hide-source .subtitle-source {
   transform: translateX(-50%) translateY(-2px);
 }
 
+.hidden {
+  display: none !important;
+}
+
+.empty-state.hidden,
+.not-found-state.hidden {
+  display: none !important;
+}
+
 .btn-resume-scroll.hidden {
-  display: none;
+  display: none !important;
 }
 
 /* Toast */

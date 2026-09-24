@@ -119,7 +119,7 @@
       obsModalClose: 'Cerrar',
       obsModalCopy: 'Copiar Link',
       obsModalCopied: '¡Copiado!',
-      sessionNotFoundTitle: 'Sesión no encontrada :/',
+      sessionNotFoundTitle: 'Sesión no encontrada',
       sessionNotFoundDesc: 'Esta sesión no existe o fue eliminada permanentemente.',
       sessionNotFoundHome: 'Ir a sesiones activas',
       langPairs: {
@@ -169,7 +169,7 @@
       obsModalClose: 'Close',
       obsModalCopy: 'Copy Link',
       obsModalCopied: 'Copied!',
-      sessionNotFoundTitle: 'Session not found :/',
+      sessionNotFoundTitle: 'Session not found',
       sessionNotFoundDesc: 'This session does not exist or was permanently deleted.',
       sessionNotFoundHome: 'Go to active sessions',
       langPairs: {
@@ -219,7 +219,7 @@
       obsModalClose: 'Fechar',
       obsModalCopy: 'Copiar Link',
       obsModalCopied: 'Copiado!',
-      sessionNotFoundTitle: 'Sessão não encontrada :/',
+      sessionNotFoundTitle: 'Sessão não encontrada',
       sessionNotFoundDesc: 'Esta sessão não existe ou foi excluída permanentemente.',
       sessionNotFoundHome: 'Ir para sessões ativas',
       langPairs: {
@@ -598,9 +598,10 @@
     }
     if (elements.notFoundState) {
       elements.notFoundState.classList.remove('hidden');
+      elements.notFoundState.style.display = 'flex';
       const t = I18N[currentSiteLang] || I18N.es;
       if (elements.notFoundTitle) {
-        elements.notFoundTitle.textContent = customTitle || t.sessionNotFoundTitle || 'Sesión no encontrada :/';
+        elements.notFoundTitle.textContent = customTitle || t.sessionNotFoundTitle || 'Sesión no encontrada';
       }
       if (elements.notFoundSubtitle) {
         elements.notFoundSubtitle.textContent = customSubtitle || t.sessionNotFoundDesc || 'Esta sesión no existe o fue eliminada permanentemente.';
@@ -612,9 +613,11 @@
     isSessionNotFound = false;
     if (elements.notFoundState) {
       elements.notFoundState.classList.add('hidden');
+      elements.notFoundState.style.display = 'none';
     }
     if (elements.subtitlesList) {
       elements.subtitlesList.classList.remove('hidden');
+      elements.subtitlesList.style.display = '';
     }
   }
 
@@ -1177,7 +1180,7 @@
         opt.value = '';
         opt.textContent = 'Sin sesiones';
         elements.selectSession.appendChild(opt);
-        showSessionNotFoundUI('Sesión no encontrada :/', 'No hay ninguna sesión activa en este momento.');
+        showSessionNotFoundUI('Sesión no encontrada', 'No hay ninguna sesión activa en este momento.');
         return;
       }
 
@@ -1200,9 +1203,12 @@
 
       if (currentSession && !sessionExists) {
         // La sesión especificada en la URL no existe o fue eliminada
-        showSessionNotFoundUI('Sesión no encontrada :/', `La sesión "${currentSession}" fue eliminada o no existe.`);
-      } else if (!currentSession && sessions.length > 0) {
-        currentSession = sessions[0].session_id.toLowerCase().trim();
+        showSessionNotFoundUI('Sesión no encontrada', `La sesión "${currentSession}" fue eliminada o no existe.`);
+      } else {
+        if (!currentSession && sessions.length > 0) {
+          currentSession = sessions[0].session_id.toLowerCase().trim();
+        }
+        hideSessionNotFoundUI();
       }
     } catch (e) {
       console.debug('Error al cargar sesiones:', e);
@@ -1458,6 +1464,7 @@
   // Inicialización Global
   // -------------------------------------------------------------------------
   function init() {
+    hideSessionNotFoundUI();
     applySiteTranslations();
     applyTheme();
     applyViewMode();

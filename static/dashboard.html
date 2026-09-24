@@ -294,14 +294,14 @@
       position: absolute;
       top: calc(100% + 4px);
       left: 0;
-      min-width: 240px;
-      max-width: 320px;
-      background: #0d0d10;
+      min-width: 250px;
+      max-width: 340px;
+      background: #111116;
       border: 1px solid var(--border-hover);
       border-radius: 4px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.75);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.85);
       z-index: 150;
-      padding: 0.4rem 0;
+      padding: 0.35rem 0;
       animation: modal-fade-in 0.12s ease-out;
     }
 
@@ -310,45 +310,63 @@
     }
 
     .slicer-dropdown-select-all {
-      padding: 0.35rem 0.8rem;
+      padding: 0;
+    }
+
+    .slicer-dropdown-select-all .slicer-chk-item {
+      font-weight: 600;
+      color: var(--text-primary);
     }
 
     .slicer-dropdown-divider {
       height: 1px;
-      background: var(--border-color);
+      background: rgba(255, 255, 255, 0.08);
       margin: 0.3rem 0;
     }
 
     .slicer-dropdown-list {
       max-height: 220px;
       overflow-y: auto;
-      padding: 0.2rem 0;
+      padding: 0;
+    }
+
+    .slicer-dropdown-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .slicer-dropdown-list::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 2px;
     }
 
     .slicer-chk-item {
       display: flex;
       align-items: center;
-      gap: 0.55rem;
-      padding: 0.35rem 0.8rem;
+      gap: 0.65rem;
+      padding: 0.42rem 0.85rem;
       font-size: 0.74rem;
       color: var(--text-secondary);
       cursor: pointer;
       user-select: none;
-      transition: background 0.1s ease, color 0.1s ease;
+      transition: background 0.12s ease, color 0.12s ease;
     }
 
     .slicer-chk-item:hover {
-      background: rgba(255, 255, 255, 0.05);
-      color: var(--text-primary);
+      background: rgba(0, 240, 255, 0.08);
+      color: #ffffff;
     }
 
     .slicer-chk-item input[type="checkbox"] {
       cursor: pointer;
-      accent-color: var(--text-primary);
+      accent-color: #00f0ff;
+      margin: 0;
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
     }
 
     .slicer-empty-text {
-      padding: 0.4rem 0.8rem;
+      padding: 0.5rem 0.85rem;
       font-size: 0.72rem;
       color: var(--text-muted);
       font-style: italic;
@@ -458,18 +476,25 @@
     }
 
     .analytics-row-top {
+      display: grid;
+      grid-template-columns: 1fr clamp(240px, 22vw, 320px);
+      gap: 1rem;
+      align-items: stretch;
       width: 100%;
     }
 
     .analytics-row-bottom {
       display: grid;
-      grid-template-columns: 1.2fr clamp(190px, 18vw, 250px) clamp(190px, 18vw, 250px);
+      grid-template-columns: 1.2fr clamp(200px, 18vw, 260px) clamp(240px, 22vw, 320px);
       gap: 1rem;
       align-items: stretch;
       width: 100%;
     }
 
     @media (max-width: 1200px) {
+      .analytics-row-top {
+        grid-template-columns: 1fr;
+      }
       .analytics-row-bottom {
         grid-template-columns: 1fr 1fr;
       }
@@ -482,6 +507,107 @@
       .analytics-row-bottom {
         grid-template-columns: 1fr;
       }
+    }
+
+    /* Tabla de Métricas (Power BI Style) */
+    .chart-card-table {
+      background-color: transparent;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      width: 100%;
+      min-width: 0;
+    }
+
+    .table-ms-wrap {
+      background-color: var(--bg-dark);
+      border-radius: 4px;
+      height: 200px;
+      overflow-y: auto;
+      overflow-x: auto;
+      border: 1px solid var(--border-color);
+    }
+
+    .table-ms-wrap::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+
+    .table-ms-wrap::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 2px;
+    }
+
+    .table-ms {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.72rem;
+      font-family: var(--font-ui);
+      white-space: nowrap;
+    }
+
+    .table-ms thead th {
+      position: sticky;
+      top: 0;
+      background: #141419;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.45rem 0.6rem;
+      border-bottom: 1px solid var(--border-color);
+      text-align: right;
+      z-index: 2;
+      font-size: 0.68rem;
+    }
+
+    .table-ms thead th:first-child {
+      text-align: left;
+    }
+
+    .table-ms tbody tr {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      transition: background 0.1s ease;
+    }
+
+    .table-ms tbody tr:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .table-ms tbody td {
+      padding: 0.38rem 0.6rem;
+      color: var(--text-primary);
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .table-ms tbody td:first-child {
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-primary);
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .table-ms-val-total {
+      color: #00f0ff !important;
+      font-weight: 600;
+    }
+
+    .table-ms-val-asr {
+      color: #ff9500 !important;
+    }
+
+    .table-ms-val-trans {
+      color: #f43f5e !important;
+    }
+
+    .table-ms-empty {
+      text-align: center !important;
+      padding: 3rem 0.5rem !important;
+      color: var(--text-muted) !important;
+      font-style: italic;
     }
 
     .chart-card {
@@ -1321,7 +1447,7 @@
            =================================================================== -->
       <section class="dashboard-section" id="section-analytics">
         <div class="analytics-section-layout">
-          <!-- Fila Superior: Telemetría de Latencia a todo lo ancho -->
+          <!-- Fila Superior: Telemetría de Latencia + Tabla de Métricas (Power BI Style) -->
           <div class="analytics-row-top">
             <div class="chart-card chart-card-main">
               <div class="chart-card-header">
@@ -1336,6 +1462,30 @@
               </div>
               <div class="chart-canvas-wrap chart-dot-pattern">
                 <canvas id="chart-latency"></canvas>
+              </div>
+            </div>
+
+            <!-- Tabla de Métricas por Sesión (Power BI Style) -->
+            <div class="chart-card chart-card-table">
+              <div class="chart-card-header">
+                <div class="chart-title-group">
+                  <h3 class="chart-title-main" id="lbl-table-ms-title">TELEMETRÍA EN VIVO</h3>
+                </div>
+              </div>
+              <div class="table-ms-wrap chart-dot-pattern">
+                <table class="table-ms">
+                  <thead>
+                    <tr>
+                      <th id="th-col-session">Sesión</th>
+                      <th id="th-col-total">Latencia Total</th>
+                      <th id="th-col-asr">ASR Groq</th>
+                      <th id="th-col-trans">Traducción</th>
+                    </tr>
+                  </thead>
+                  <tbody id="table-ms-tbody">
+                    <tr><td colspan="4" class="table-ms-empty">Sin sesiones activas</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -1566,7 +1716,14 @@
           chartMinutesLabel: 'Minutos de audio:',
           chartChunksLabel: 'Peticiones / Bloques:',
           chartStatusLabel: 'Estado:',
-          chartAudienceLabel: 'espectadores'
+          chartAudienceLabel: 'espectadores',
+          cardTitlePrefix: 'TÍTULO:',
+          tableMsTitle: 'TELEMETRÍA EN VIVO',
+          thColSession: 'Sesión',
+          thColTotal: 'Latencia Total',
+          thColAsr: 'ASR Groq',
+          thColTrans: 'Traducción',
+          tableMsEmpty: 'Sin sesiones activas'
         },
         en: {
           siteTitle: 'Control Room | Live Subtitles',
@@ -1665,7 +1822,14 @@
           chartMinutesLabel: 'Audio minutes:',
           chartChunksLabel: 'Requests / Chunks:',
           chartStatusLabel: 'Status:',
-          chartAudienceLabel: 'viewers'
+          chartAudienceLabel: 'viewers',
+          cardTitlePrefix: 'TITLE:',
+          tableMsTitle: 'LIVE TELEMETRY',
+          thColSession: 'Session',
+          thColTotal: 'Total Latency',
+          thColAsr: 'ASR Groq',
+          thColTrans: 'Translation',
+          tableMsEmpty: 'No active sessions'
         },
         pt: {
           siteTitle: 'Control Room | Legendas ao Vivo',
@@ -1761,7 +1925,14 @@
           chartMinutesLabel: 'Minutos de áudio:',
           chartChunksLabel: 'Requisições / Blocos:',
           chartStatusLabel: 'Estado:',
-          chartAudienceLabel: 'espectadores'
+          chartAudienceLabel: 'espectadores',
+          cardTitlePrefix: 'TÍTULO:',
+          tableMsTitle: 'TELEMETRIA EM VIVO',
+          thColSession: 'Sessão',
+          thColTotal: 'Latência Total',
+          thColAsr: 'ASR Groq',
+          thColTrans: 'Tradução',
+          tableMsEmpty: 'Nenhuma sessão ativa'
         }
       };
 
@@ -1795,6 +1966,12 @@
         lblKpiSseTitle: document.getElementById('lbl-kpi-sse-title'),
         // Sección Analytics & Gráficos
         lblChartLatencyTitle: document.getElementById('lbl-chart-latency-title'),
+        lblTableMsTitle: document.getElementById('lbl-table-ms-title'),
+        thColSession: document.getElementById('th-col-session'),
+        thColTotal: document.getElementById('th-col-total'),
+        thColAsr: document.getElementById('th-col-asr'),
+        thColTrans: document.getElementById('th-col-trans'),
+        tableMsTbody: document.getElementById('table-ms-tbody'),
         lblPillTotal: document.getElementById('lbl-pill-total'),
         lblPillAsr: document.getElementById('lbl-pill-asr'),
         lblPillTrans: document.getElementById('lbl-pill-trans'),
@@ -1943,6 +2120,11 @@
         if (elements.inputStreamUrl && t.modalStreamUrlPlaceholder) elements.inputStreamUrl.placeholder = t.modalStreamUrlPlaceholder;
         // Analytics labels
         if (elements.lblChartLatencyTitle) elements.lblChartLatencyTitle.textContent = t.chartLatencyTitle;
+        if (elements.lblTableMsTitle) elements.lblTableMsTitle.textContent = t.tableMsTitle;
+        if (elements.thColSession) elements.thColSession.textContent = t.thColSession;
+        if (elements.thColTotal) elements.thColTotal.textContent = t.thColTotal;
+        if (elements.thColAsr) elements.thColAsr.textContent = t.thColAsr;
+        if (elements.thColTrans) elements.thColTrans.textContent = t.thColTrans;
         if (elements.lblPillTotal) elements.lblPillTotal.textContent = t.pillTotal;
         if (elements.lblPillAsr) elements.lblPillAsr.textContent = t.pillAsr;
         if (elements.lblPillTrans) elements.lblPillTrans.textContent = t.pillTrans;
@@ -2020,9 +2202,9 @@
                   label: 'Latencia Total',
                   data: [],
                   borderColor: '#00f0ff',
-                  backgroundColor: 'rgba(0, 240, 255, 0.07)',
+                  backgroundColor: 'transparent',
                   borderWidth: 2,
-                  fill: true,
+                  fill: false,
                   tension: 0.35,
                   pointRadius: 2.5,
                   pointHoverRadius: 5,
@@ -2334,6 +2516,30 @@
         }
       }
 
+      function updateLatencyMetricsTable(breakdown) {
+        if (!elements.tableMsTbody) return;
+        const t = I18N[currentSiteLang] || I18N.es;
+        if (!breakdown || breakdown.length === 0) {
+          elements.tableMsTbody.innerHTML = `<tr><td colspan="4" class="table-ms-empty">${t.tableMsEmpty || 'Sin sesiones activas'}</td></tr>`;
+          return;
+        }
+
+        let html = '';
+        breakdown.forEach(item => {
+          const safeId = escapeHtml(item.id || '');
+          const safeTitle = escapeHtml(item.title || item.id || '');
+          html += `
+            <tr>
+              <td title="${safeTitle} (${safeId})">${safeTitle}</td>
+              <td class="table-ms-val-total">${item.tot}ms</td>
+              <td class="table-ms-val-asr">${item.asr}ms</td>
+              <td class="table-ms-val-trans">${item.trans}ms</td>
+            </tr>
+          `;
+        });
+        elements.tableMsTbody.innerHTML = html;
+      }
+
       function updateAnalyticsCharts(sessions) {
         if (!sessions || typeof Chart === 'undefined') return;
         if (!chartLatencyInstance || !chartUsageInstance || !chartSourceInstance || !chartTargetInstance) {
@@ -2444,6 +2650,9 @@
           chartLatencyInstance.data.datasets[1].data = latencyHistory.map(h => h.asr);
           chartLatencyInstance.data.datasets[2].data = latencyHistory.map(h => h.trans);
           chartLatencyInstance.update('none');
+          updateLatencyMetricsTable(currentPoint.breakdown);
+        } else {
+          updateLatencyMetricsTable([]);
         }
 
         // 2. Gráfico de Barras (Consumo de Audio por Sesión - Solo transmisiones activas)
@@ -2899,7 +3108,7 @@
 
           <div class="card-body">
             <div class="card-session-title">
-              <span class="card-session-title-label">Title:</span>
+              <span class="card-session-title-label">${t.cardTitlePrefix || 'TÍTULO:'}</span>
               <span class="room-title" title="${safeTitle}">${safeTitle}</span>
             </div>
             <!-- Métricas en fila con tooltips estilo Power BI -->
@@ -3000,6 +3209,13 @@
         const safeTitle = session.title || ('Sala ' + session.session_id);
         if (titleEl && titleEl.textContent !== safeTitle) {
           titleEl.textContent = safeTitle;
+          titleEl.title = safeTitle;
+        }
+
+        const titleLabelEl = card.querySelector('.card-session-title-label');
+        const expectedPrefix = t.cardTitlePrefix || 'TÍTULO:';
+        if (titleLabelEl && titleLabelEl.textContent !== expectedPrefix) {
+          titleLabelEl.textContent = expectedPrefix;
         }
 
         // Badge STREAM
