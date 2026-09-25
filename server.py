@@ -16,4 +16,4 @@ from backend.server import app
 if __name__ == "__main__":
     import uvicorn
     reload_dirs = [os.path.join(BASE_DIR, "backend"), os.path.join(BASE_DIR, "static")]
-    uvicorn.run("backend.server:app", host="0.0.0.0", port=8000, reload=True, reload_dirs=reload_dirs)
+    uvicorn.run("backend.server:app", host="0.0.0.0", port=8000, reload=True, reload_dirs=reload_dirs, timeout_graceful_shutdown=5)

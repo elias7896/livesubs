@@ -934,180 +934,203 @@ class AudioWorker:
         if not ffmpeg_exe:
             ffmpeg_exe = "ffmpeg"
 
-        target_url = stream_url
-        is_live = False
-        user_agent = None
-
-        # Detección de protocolos directos de livestream
-        if any(stream_url.lower().startswith(p) for p in ("rtmp://", "rtsp://")) or force_live:
-            is_live = True
-
-        # Si es enlace web de plataforma (YouTube, Twitch, Kick, etc.)
         is_direct = any(stream_url.lower().startswith(p) for p in ("rtmp://", "rtsp://")) or stream_url.lower().endswith((".mp3", ".wav", ".aac"))
-        if not is_direct:
-            try:
-                import yt_dlp
-                logger.info("Extrayendo flujo de audio con yt-dlp...")
-                ydl_opts = {
-                    'format': 'bestaudio/best',
-                    'quiet': True,
-                    'no_warnings': True,
-                    'skip_download': True,
-                    'socket_timeout': 15,
-                    'noplaylist': True,
-                }
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    info = ydl.extract_info(stream_url, download=False)
-                    if info:
-                        if 'entries' in info and info['entries']:
-                            info = info['entries'][0]
-                        target_url = info.get('url') or stream_url
-                        # Un stream está actualmente en vivo si is_live es True o live_status es 'is_live'
-                        # NOTA: 'was_live' indica un VOD de un stream terminado, NO un stream en vivo actual
-                        is_currently_live = bool(info.get('is_live')) or (info.get('live_status') == 'is_live')
-                        if is_currently_live or force_live:
-                            is_live = True
-                        user_agent = info.get('http_headers', {}).get('User-Agent')
-                        title = info.get('title')
-                        duration = info.get('duration')
-                        dur_str = f" ({duration}s)" if duration else ""
-                        logger.info(f"Fuente detectada: '{title or stream_url}' (En vivo: {is_live}{dur_str})")
-            except Exception as e:
-                logger.warning(f"yt-dlp aviso: {e}. Conectando directamente con FFmpeg...")
-                target_url = stream_url
-
-        # Configurar FFmpeg
-        cmd = [ffmpeg_exe]
-
-        if is_live:
-            # -------------------------------------------------------------
-            # LIVESTREAM EN VIVO (YouTube Live, Twitch, Kick, RTMP, HLS):
-            # No buscar posición previa con -ss ni limitar con -re.
-            # Sintonizar de inmediato al MOMENTO ACTUAL / REAL en donde va el stream (live edge).
-            # -------------------------------------------------------------
-            logger.info("Modo LIVESTREAM activo: sintonizando directamente al momento real del stream (live edge, sin -ss).")
-            if self.session_created_ts > 0:
-                real_elapsed = max(0.0, time.time() - self.session_created_ts)
-                self.start_offset_s = max(self.start_offset_s, real_elapsed)
-                logger.info(f"Offset temporal de livestream sincronizado con tiempo real: {self.start_offset_s:.1f}s")
-
-            cmd.extend([
-                "-fflags", "+nobuffer+flush_packets",
-                "-flags", "low_delay",
-                "-live_start_index", "-1"
-            ])
-        else:
-            # -------------------------------------------------------------
-            # VIDEO GRABADO / VOD (YouTube video o archivo con duración):
-            # Continuar exactamente en el segundo donde fue pausado.
-            # -------------------------------------------------------------
-            if self.start_offset_s > 0:
-                cmd.extend(["-ss", str(round(self.start_offset_s, 2))])
-                logger.info(f"Modo VOD: reanudando decodificación desde offset temporal previo: {self.start_offset_s:.1f}s")
-
-            # Decodificar a velocidad real 1.0x estricta
-            cmd.append("-re")
-
-        # Opciones de reconexión y agente para URLs remotas
-        if target_url.startswith(("http://", "https://", "rtmp://", "rtsp://")):
-            cmd.extend([
-                "-reconnect", "1",
-                "-reconnect_streamed", "1",
-                "-reconnect_delay_max", "5",
-            ])
-            if user_agent:
-                cmd.extend(["-user_agent", user_agent])
-
-        cmd.extend([
-            "-loglevel", "warning",
-            "-i", target_url,
-            "-vn",
-            "-f", "s16le",
-            "-acodec", "pcm_s16le",
-            "-ar", str(SAMPLE_RATE),
-            "-ac", "1",
-            "pipe:1"
-        ])
-
-        logger.info(f"Iniciando decodificación continua con FFmpeg ({'tiempo real 1x' if not is_live else 'en vivo'})...")
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            bufsize=10**6
-        )
-
-        stderr_lines = deque(maxlen=30)
-
-        def _drain_stderr(pipe):
-            try:
-                for line in iter(pipe.readline, b""):
-                    if not line:
-                        break
-                    dec = line.decode("utf-8", errors="replace").strip()
-                    if dec:
-                        stderr_lines.append(dec)
-            except Exception:
-                pass
-            finally:
-                try:
-                    pipe.close()
-                except Exception:
-                    pass
-
-        stderr_thread = threading.Thread(target=_drain_stderr, args=(proc.stderr,), daemon=True)
-        stderr_thread.start()
-
-        bytes_per_frame = VAD_WINDOW_SIZE * 2  # 512 muestras * 2 bytes = 1024 bytes
-        frame_count = 0
-        start_decode_time = time.time()
+        reconnect_attempts = 0
+        reconnect_delay = 1.0
 
         try:
             while self.running.is_set():
-                raw_bytes = proc.stdout.read(bytes_per_frame)
-                if not raw_bytes or len(raw_bytes) < bytes_per_frame:
-                    if proc.poll() is not None:
-                        exit_code = proc.poll()
-                        if exit_code != 0:
-                            err_msg = "\n".join(stderr_lines)
-                            logger.warning(f"FFmpeg finalizó con código {exit_code}: {err_msg[-300:]}")
-                        else:
-                            logger.info("Flujo del stream o video finalizado normalmente.")
-                        break
-                    time.sleep(0.01)
-                    continue
+                target_url = stream_url
+                is_live = False
+                user_agent = None
 
-                frame_count += 1
-                # Garantizar ritmo en tiempo real 1.0x para evitar saturar Groq con ráfagas iniciales de HLS
-                target_wall_time = start_decode_time + (frame_count * (VAD_WINDOW_SIZE / SAMPLE_RATE))
-                delay = target_wall_time - time.time()
-                if delay > 0:
-                    time.sleep(delay)
-                elif is_live and delay < -1.5:
-                    # En livestreams, si hubo retraso por red o buffer inicial,
-                    # resincronizar el reloj base para mantener el ritmo en vivo
-                    start_decode_time = time.time() - (frame_count * (VAD_WINDOW_SIZE / SAMPLE_RATE))
+                # Detección de protocolos directos de livestream
+                if any(stream_url.lower().startswith(p) for p in ("rtmp://", "rtsp://")) or force_live:
+                    is_live = True
 
-                data_int16 = np.frombuffer(raw_bytes, dtype=np.int16)
-                data_float32 = data_int16.astype(np.float32) / 32768.0
-                self.process_frame(data_float32)
+                # Si es enlace web de plataforma (YouTube, Twitch, Kick, etc.), resolver/refrescar con yt-dlp
+                if not is_direct:
+                    try:
+                        import yt_dlp
+                        logger.info(f"Resolviendo flujo de stream con yt-dlp ({'reintento ' + str(reconnect_attempts) if reconnect_attempts > 0 else 'inicial'})...")
+                        ydl_opts = {
+                            'format': 'bestaudio/best',
+                            'quiet': True,
+                            'no_warnings': True,
+                            'skip_download': True,
+                            'socket_timeout': 15,
+                            'noplaylist': True,
+                        }
+                        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                            info = ydl.extract_info(stream_url, download=False)
+                            if info:
+                                if 'entries' in info and info['entries']:
+                                    info = info['entries'][0]
+                                target_url = info.get('url') or stream_url
+                                is_currently_live = bool(info.get('is_live')) or (info.get('live_status') == 'is_live')
+                                if is_currently_live or force_live:
+                                    is_live = True
+                                user_agent = info.get('http_headers', {}).get('User-Agent')
+                                title = info.get('title')
+                                duration = info.get('duration')
+                                dur_str = f" ({duration}s)" if duration else ""
+                                logger.info(f"Fuente resuelta: '{title or stream_url}' (En vivo: {is_live}{dur_str})")
+                    except Exception as e:
+                        logger.warning(f"yt-dlp aviso: {e}. Conectando directamente con FFmpeg...")
+                        target_url = stream_url
+
+                # Configurar FFmpeg
+                cmd = [ffmpeg_exe]
+
+                if is_live:
+                    # LIVESTREAM EN VIVO (YouTube Live, Twitch, Kick, RTMP, HLS):
+                    # Sintonizar de inmediato al MOMENTO ACTUAL / REAL en donde va el stream (live edge).
+                    logger.info("Modo LIVESTREAM activo: sintonizando al live edge del stream en vivo.")
+                    if self.session_created_ts > 0:
+                        real_elapsed = max(0.0, time.time() - self.session_created_ts)
+                        self.start_offset_s = max(self.start_offset_s, real_elapsed)
+
+                    cmd.extend([
+                        "-fflags", "+nobuffer+flush_packets",
+                        "-flags", "low_delay",
+                        "-live_start_index", "-1"
+                    ])
+                else:
+                    # VIDEO GRABADO / VOD: Continuar exactamente en el segundo donde fue pausado
+                    if self.start_offset_s > 0:
+                        cmd.extend(["-ss", str(round(self.start_offset_s, 2))])
+                        logger.info(f"Modo VOD: reanudando decodificación desde offset: {self.start_offset_s:.1f}s")
+                    cmd.append("-re")
+
+                # Opciones de reconexión y agente para URLs remotas
+                if target_url.startswith(("http://", "https://", "rtmp://", "rtsp://")):
+                    cmd.extend([
+                        "-reconnect", "1",
+                        "-reconnect_streamed", "1",
+                        "-reconnect_delay_max", "5",
+                    ])
+                    if user_agent:
+                        cmd.extend(["-user_agent", user_agent])
+
+                cmd.extend([
+                    "-loglevel", "warning",
+                    "-i", target_url,
+                    "-vn",
+                    "-f", "s16le",
+                    "-acodec", "pcm_s16le",
+                    "-ar", str(SAMPLE_RATE),
+                    "-ac", "1",
+                    "pipe:1"
+                ])
+
+                logger.info(f"Iniciando decodificación con FFmpeg ({'tiempo real 1x' if not is_live else 'en vivo'})...")
+                proc = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    bufsize=10**6
+                )
+
+                stderr_lines = deque(maxlen=30)
+
+                def _drain_stderr(pipe):
+                    try:
+                        for line in iter(pipe.readline, b""):
+                            if not line:
+                                break
+                            dec = line.decode("utf-8", errors="replace").strip()
+                            if dec:
+                                stderr_lines.append(dec)
+                    except Exception:
+                        pass
+                    finally:
+                        try:
+                            pipe.close()
+                        except Exception:
+                            pass
+
+                stderr_thread = threading.Thread(target=_drain_stderr, args=(proc.stderr,), daemon=True)
+                stderr_thread.start()
+
+                bytes_per_frame = VAD_WINDOW_SIZE * 2  # 512 muestras * 2 bytes = 1024 bytes
+                frame_count = 0
+                start_decode_time = time.time()
+                frames_read_successfully = 0
+
+                try:
+                    while self.running.is_set():
+                        raw_bytes = proc.stdout.read(bytes_per_frame)
+                        if not raw_bytes or len(raw_bytes) < bytes_per_frame:
+                            if proc.poll() is not None:
+                                exit_code = proc.poll()
+                                if exit_code != 0:
+                                    err_msg = "\n".join(stderr_lines)
+                                    logger.warning(f"FFmpeg finalizó con código {exit_code}: {err_msg[-300:]}")
+                                else:
+                                    logger.info("Flujo del stream o video finalizado normalmente.")
+                                break
+                            time.sleep(0.01)
+                            continue
+
+                        frames_read_successfully += 1
+                        frame_count += 1
+                        if not is_live:
+                            self.start_offset_s += (VAD_WINDOW_SIZE / SAMPLE_RATE)
+
+                        target_wall_time = start_decode_time + (frame_count * (VAD_WINDOW_SIZE / SAMPLE_RATE))
+                        delay = target_wall_time - time.time()
+                        if delay > 0:
+                            time.sleep(delay)
+                        elif is_live and delay < -1.5:
+                            start_decode_time = time.time() - (frame_count * (VAD_WINDOW_SIZE / SAMPLE_RATE))
+
+                        data_int16 = np.frombuffer(raw_bytes, dtype=np.int16)
+                        data_float32 = data_int16.astype(np.float32) / 32768.0
+                        self.process_frame(data_float32)
+
+                finally:
+                    try:
+                        if proc.stdout:
+                            proc.stdout.close()
+                    except Exception:
+                        pass
+                    try:
+                        proc.terminate()
+                        proc.wait(timeout=2)
+                    except Exception:
+                        try:
+                            proc.kill()
+                        except Exception:
+                            pass
+
+                if not self.running.is_set():
+                    break
+
+                # Si es un video pregrabado (VOD) y terminó de reproducirse completo de manera normal (código 0)
+                if not is_live and frames_read_successfully > 0 and (proc and proc.poll() == 0):
+                    logger.info("Video VOD finalizado por completo.")
+                    break
+
+                # Si el stream estuvo activo y procesó al menos 5s de audio, resetear contador de reintentos
+                if frames_read_successfully > 150:
+                    reconnect_attempts = 0
+                    reconnect_delay = 1.0
+
+                reconnect_attempts += 1
+                logger.warning(
+                    f"[STREAM-RECONNECT] Conexión de stream interrumpida (intento {reconnect_attempts}). "
+                    f"Reconectando y reanudando captura en {reconnect_delay:.1f}s..."
+                )
+                time.sleep(reconnect_delay)
+                reconnect_delay = min(reconnect_delay * 1.5, 6.0)
+
+                # Resetear clasificador VAD para evitar estados residuales al reconectar
+                if hasattr(self, 'vad') and hasattr(self.vad, 'reset_state'):
+                    self.vad.reset_state()
 
         except KeyboardInterrupt:
             logger.info("Detención manual solicitada por el usuario.")
         finally:
-            try:
-                if proc.stdout:
-                    proc.stdout.close()
-            except Exception:
-                pass
-            try:
-                proc.terminate()
-                proc.wait(timeout=2)
-            except Exception:
-                try:
-                    proc.kill()
-                except Exception:
-                    pass
             self._emit_current_chunk()
             self.inference_queue.join()
             self.stop()

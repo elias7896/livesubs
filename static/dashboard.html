@@ -2861,7 +2861,8 @@
 
           function getSessionMetrics(s) {
             const sid = (s.session_id || '').toLowerCase().trim();
-            if (s.status === 'closed') {
+            const isProlongedSilence = (s.silence_duration_s !== null && s.silence_duration_s !== undefined && s.silence_duration_s > 30);
+            if (s.status === 'closed' || isProlongedSilence) {
               delete lastValidMetricsBySession[sid];
               return { tot: 0, asr: 0, trans: 0 };
             }

@@ -23,7 +23,7 @@ from typing import Set, Dict, Any, Optional, List
 
 import re
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -228,6 +228,17 @@ class ConnectionManager:
                 pass
             await self.disconnect(ws)
 
+    async def close_all_connections(self, code: int = 1001, reason: str = "Servidor apagándose"):
+        """Cierra y desconecta todas las conexiones WebSocket activas en el servidor de forma ordenada."""
+        async with self._lock:
+            all_sockets = list(self.ws_to_room.keys())
+        for ws in all_sockets:
+            try:
+                await ws.close(code=code, reason=reason)
+            except Exception:
+                pass
+            await self.disconnect(ws)
+
 
 class TelemetryTracker:
     """
@@ -413,6 +424,7 @@ class StreamWorkerManager:
 
     def __init__(self):
         self.workers: Dict[str, subprocess.Popen] = {}
+        self.configs: Dict[str, dict] = {}
         self._lock = asyncio.Lock()
 
     async def start_worker(self, session_id: str, stream_url: str, source_lang: str = "en", target_lang: str = "es", is_live: bool = False) -> bool:
@@ -449,6 +461,13 @@ class StreamWorkerManager:
             )
             async with self._lock:
                 self.workers[sid] = proc
+                self.configs[sid] = {
+                    "stream_url": stream_url,
+                    "source_lang": source_lang,
+                    "target_lang": target_lang,
+                    "is_live": is_live,
+                    "active": True
+                }
 
             # Reenviar logs del subproceso worker al logger del servidor
             def _log_forwarder(p: subprocess.Popen, room: str):
@@ -469,6 +488,8 @@ class StreamWorkerManager:
     async def stop_worker(self, session_id: str) -> bool:
         sid = session_id.lower().strip()
         async with self._lock:
+            if sid in self.configs:
+                self.configs[sid]["active"] = False
             proc = self.workers.pop(sid, None)
 
         if proc:
@@ -490,12 +511,50 @@ class StreamWorkerManager:
         proc = self.workers.get(sid)
         return proc is not None and proc.poll() is None
 
+    async def watchdog_loop(self):
+        """Monitorea workers de stream activos y los reinicia automáticamente si finalizan de forma inesperada."""
+        while not shutdown_event.is_set():
+            try:
+                await asyncio.wait_for(shutdown_event.wait(), timeout=3.0)
+                break
+            except asyncio.TimeoutError:
+                pass
+
+            to_restart = []
+            async with self._lock:
+                for sid, cfg in list(self.configs.items()):
+                    if not cfg.get("active"):
+                        continue
+                    proc = self.workers.get(sid)
+                    if proc is not None and proc.poll() is not None:
+                        exit_code = proc.poll()
+                        logger.warning(
+                            f"[STREAM-WATCHDOG] Worker de stream para sala '{sid}' finalizó inesperadamente (código {exit_code}). "
+                            "Auto-reiniciando worker..."
+                        )
+                        to_restart.append((sid, dict(cfg)))
+
+            for sid, cfg in to_restart:
+                if not shutdown_event.is_set() and cfg.get("active"):
+                    await self.start_worker(
+                        session_id=sid,
+                        stream_url=cfg["stream_url"],
+                        source_lang=cfg.get("source_lang", "auto"),
+                        target_lang=cfg.get("target_lang", "es"),
+                        is_live=cfg.get("is_live", True)
+                    )
+
     async def stop_all(self):
         async with self._lock:
+            for sid, cfg in self.configs.items():
+                cfg["active"] = False
             all_sids = list(self.workers.keys())
         for sid in all_sids:
             await self.stop_worker(sid)
 
+
+# Evento global de apagado limpio
+shutdown_event = asyncio.Event()
 
 # Instancias globales
 manager = ConnectionManager()
@@ -632,6 +691,7 @@ async def valkey_pubsub_listener(app: FastAPI):
 async def lifespan(app: FastAPI):
     """Ciclo de vida de FastAPI: inicializa clientes, DB y tareas de fondo."""
     global valkey_client
+    shutdown_event.clear()
 
     valkey_client = aioredis.Redis(
         host=VALKEY_HOST,
@@ -645,13 +705,34 @@ async def lifespan(app: FastAPI):
     app.state.telemetry = telemetry
 
     listener_task = asyncio.create_task(valkey_pubsub_listener(app))
+    watchdog_task = asyncio.create_task(stream_manager.watchdog_loop())
     logger.info("Gateway WebSockets & Observabilidad iniciado.")
+
+    # Auto-reanudar workers de stream para sesiones activas en la BD
+    try:
+        db_sessions = await db.list_sessions()
+        for s in db_sessions:
+            if s.get("status") != "closed" and s.get("stream_url"):
+                sid = s["session_id"].lower().strip()
+                logger.info(f"Auto-iniciando worker de stream para sesión activa '{sid}'...")
+                await stream_manager.start_worker(
+                    session_id=sid,
+                    stream_url=s["stream_url"],
+                    source_lang=s.get("source_lang") or "auto",
+                    target_lang=s.get("target_lang") or "es",
+                    is_live=True
+                )
+    except Exception as e:
+        logger.warning(f"Aviso al auto-iniciar workers en arranque: {e}")
 
     try:
         yield
     finally:
         logger.info("Deteniendo Gateway...")
+        shutdown_event.set()
         await stream_manager.stop_all()
+        await manager.close_all_connections(code=1001, reason="Servidor apagándose")
+        watchdog_task.cancel()
         listener_task.cancel()
         try:
             await listener_task
@@ -669,6 +750,13 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan
 )
+
+@app.middleware("http")
+async def handle_shutdown_cancellation_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except asyncio.CancelledError:
+        return Response(status_code=204)
 
 app.add_middleware(
     CORSMiddleware,
@@ -1049,7 +1137,7 @@ async def stream_telemetry():
     Emite actualizaciones cada 1.5s sin sobrecargar el servidor.
     """
     async def event_generator():
-        while True:
+        while not shutdown_event.is_set():
             try:
                 snapshots = await telemetry.get_all_snapshots(manager)
                 data = {
@@ -1058,12 +1146,16 @@ async def stream_telemetry():
                     "sessions": snapshots
                 }
                 yield f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
-                await asyncio.sleep(1.5)
-            except asyncio.CancelledError:
+                try:
+                    await asyncio.wait_for(shutdown_event.wait(), timeout=1.5)
+                    break
+                except asyncio.TimeoutError:
+                    pass
+            except (asyncio.CancelledError, GeneratorExit):
                 break
             except Exception as e:
                 logger.error(f"Error en stream SSE: {e}")
-                await asyncio.sleep(2)
+                break
 
     return StreamingResponse(
         event_generator(),
@@ -1180,5 +1272,5 @@ async def websocket_endpoint(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host=HOST, port=PORT, timeout_graceful_shutdown=2)
+    uvicorn.run(app, host=HOST, port=PORT, timeout_graceful_shutdown=5)
 
