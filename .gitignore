@@ -78,3 +78,5 @@ appendonly.aof
 *.db-shm
 *.db-wal
 
+# AI prompts and specifications (private)
+prompts-ai/
