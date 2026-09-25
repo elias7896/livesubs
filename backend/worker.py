@@ -77,8 +77,8 @@ VALKEY_PORT = int(os.getenv("VALKEY_PORT", "6379"))
 VALKEY_CHANNEL = os.getenv("VALKEY_CHANNEL", "subtitles:live")
 VALKEY_HISTORY_KEY = os.getenv("VALKEY_HISTORY_KEY", "subtitles:history")
 
-CHUNK_SECONDS = float(os.getenv("CHUNK_SECONDS", "4.0"))
-MAX_CHUNK_SECONDS = float(os.getenv("MAX_CHUNK_SECONDS", "5.4"))
+CHUNK_SECONDS = float(os.getenv("CHUNK_SECONDS", "4.5"))
+MAX_CHUNK_SECONDS = float(os.getenv("MAX_CHUNK_SECONDS", "7.5"))
 SAMPLE_RATE = int(os.getenv("SAMPLE_RATE", "16000"))
 _candidate_vad = [
     os.getenv("VAD_MODEL_PATH", ""),
@@ -111,8 +111,8 @@ GLOSSARY_TERMS_DEFAULT = os.getenv("GLOSSARY_TERMS", "")
 # Parámetros de VAD
 VAD_WINDOW_SIZE = 512  # 32ms a 16kHz
 VAD_THRESHOLD = float(os.getenv("VAD_THRESHOLD", "0.5"))
-PAUSE_SILENCE_SECONDS = float(os.getenv("PAUSE_SILENCE_SECONDS", "0.45"))
-MIN_SPEECH_DURATION = float(os.getenv("MIN_SPEECH_DURATION", "0.40"))
+PAUSE_SILENCE_SECONDS = float(os.getenv("PAUSE_SILENCE_SECONDS", "0.58"))
+MIN_SPEECH_DURATION = float(os.getenv("MIN_SPEECH_DURATION", "0.45"))
 
 # Mapeo de Idiomas
 LANG_NAMES = {
@@ -713,18 +713,21 @@ class AudioWorker:
         self.running = threading.Event()
         self.running.set()
 
-        self.preroll = deque(maxlen=3)
+        frames_per_sec = SAMPLE_RATE / VAD_WINDOW_SIZE  # 31.25 fps
+        self.preroll_len = max(8, int(0.35 * frames_per_sec))  # ~350ms (11 frames) de pre-roll para no cortar inicio de palabras
+        self.preroll = deque(maxlen=self.preroll_len)
         self.accumulated_frames = []
         self.in_speech = False
         self.consecutive_silent_frames = 0
 
-        frames_per_sec = SAMPLE_RATE / VAD_WINDOW_SIZE  # 31.25 fps
         self.target_frames = int(CHUNK_SECONDS * frames_per_sec)
         self.max_elastic_frames = int(MAX_CHUNK_SECONDS * frames_per_sec)
         self.max_frames = self.target_frames
         self.min_speech_frames = int(MIN_SPEECH_DURATION * frames_per_sec)
         self.pause_silence_frames = int(PAUSE_SILENCE_SECONDS * frames_per_sec)
-        self.micro_pause_frames = max(3, int(0.16 * frames_per_sec))  # ~160ms micro-pausa entre palabras
+        self.micro_pause_frames = max(6, int(0.28 * frames_per_sec))  # ~280ms micro-pausa entre oraciones (evita cortes intra-palabra)
+        self.postroll_frames = max(3, int(0.12 * frames_per_sec))  # ~120ms post-roll para final suave de palabra
+        self.overlap_frames = max(4, int(0.16 * frames_per_sec))  # ~160ms solapamiento en cortes forzados elásticos
 
         self.request_timestamps = deque()
         self.rpm_lock = threading.Lock()
@@ -878,18 +881,53 @@ class AudioWorker:
                 except ValueError:
                     pass
 
-    def _emit_current_chunk(self):
+    def _emit_current_chunk(self, is_forced_cut: bool = False):
         if not self.accumulated_frames:
             return
 
-        total_frames = len(self.accumulated_frames)
+        if is_forced_cut:
+            # Corte forzado por límite elástico mientras el orador sigue hablando:
+            frames_to_send = list(self.accumulated_frames)
+            total_frames = len(frames_to_send)
+            if total_frames >= self.min_speech_frames:
+                chunk_array = np.concatenate(frames_to_send)
+                emit_time = time.time()
+                try:
+                    self.inference_queue.put_nowait((chunk_array, emit_time))
+                except queue.Full:
+                    logger.warning("Cola de inferencia llena, descartando chunk.")
+
+            # Mantener solapamiento de seguridad para que la palabra cruzada no se mutile
+            keep = min(self.overlap_frames, len(self.accumulated_frames))
+            self.accumulated_frames = list(self.accumulated_frames[-keep:])
+            self.in_speech = True
+            self.consecutive_silent_frames = 0
+            return
+
+        # Corte por pausa o fin de alocución:
+        # 1. Preservar un post-roll suave (ej. ~120ms) para garantizar que la última consonante/vocal no se mutile
+        excess_silence = max(0, self.consecutive_silent_frames - self.postroll_frames)
+        if excess_silence > 0 and len(self.accumulated_frames) > excess_silence:
+            frames_to_send = self.accumulated_frames[:-excess_silence]
+            trailing_silence = self.accumulated_frames[-excess_silence:]
+        else:
+            frames_to_send = self.accumulated_frames
+            trailing_silence = []
+
+        total_frames = len(frames_to_send)
         if total_frames >= self.min_speech_frames:
-            chunk_array = np.concatenate(self.accumulated_frames)
+            chunk_array = np.concatenate(frames_to_send)
             emit_time = time.time()
             try:
                 self.inference_queue.put_nowait((chunk_array, emit_time))
             except queue.Full:
                 logger.warning("Cola de inferencia llena, descartando chunk.")
+
+        # 2. Cargar el silencio sobrante de la pausa al preroll del siguiente bloque para onset perfecto
+        self.preroll.clear()
+        if trailing_silence:
+            for f in trailing_silence[-self.preroll_len:]:
+                self.preroll.append(f)
 
         self.accumulated_frames = []
         self.in_speech = False
@@ -909,22 +947,22 @@ class AudioWorker:
 
             # Límite elástico absoluto: solo cortar si alcanzamos el techo máximo permitido
             if len(self.accumulated_frames) >= self.max_elastic_frames:
-                self._emit_current_chunk()
+                self._emit_current_chunk(is_forced_cut=True)
         else:
             if self.in_speech:
                 self.consecutive_silent_frames += 1
                 self.accumulated_frames.append(frame)
 
                 curr_len = len(self.accumulated_frames)
-                # 1. Si hubo una pausa natural completa de habla (ej. 0.8s), emitir
+                # 1. Si hubo una pausa natural completa de habla (ej. 0.58s), emitir
                 if self.consecutive_silent_frames >= self.pause_silence_frames:
-                    self._emit_current_chunk()
-                # 2. Corte elástico: si superamos la duración objetivo (~4.0s) y hay una micro-pausa entre palabras (~160ms), emitir
+                    self._emit_current_chunk(is_forced_cut=False)
+                # 2. Corte elástico: si superamos la duración objetivo (~4.5s) y hay una micro-pausa entre palabras (~280ms), emitir
                 elif curr_len >= self.target_frames and self.consecutive_silent_frames >= self.micro_pause_frames:
-                    self._emit_current_chunk()
-                # 3. Límite elástico absoluto de seguridad
+                    self._emit_current_chunk(is_forced_cut=False)
+                # 3. Límite elástico absoluto de seguridad en silencio
                 elif curr_len >= self.max_elastic_frames:
-                    self._emit_current_chunk()
+                    self._emit_current_chunk(is_forced_cut=False)
             else:
                 self.preroll.append(frame)
 
