@@ -2977,6 +2977,7 @@
           targetText = found ? (found.title || found.session_id) : firstId;
         } else {
           targetText = (t.slicerButtonCount ? t.slicerButtonCount.replace('{count}', selected) : `${selected} sel.`);
+        }
         if (elements.lblSlicerButtonText.textContent !== targetText) {
           elements.lblSlicerButtonText.textContent = targetText;
         }
