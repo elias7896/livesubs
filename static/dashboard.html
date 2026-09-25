@@ -28,9 +28,9 @@
       --text-secondary: #a1a1aa;
       --text-muted: #71717a;
 
-      /* Tipografia Monocromatica / Monospace (Inconsolata y JetBrains Mono para soporte Linux nativo) */
-      --font-ui: "Inconsolata", "JetBrains Mono", "Consolas", ui-monospace, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
-      --font-subtitles: "Inconsolata", "JetBrains Mono", "Consolas", ui-monospace, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
+      /* Tipografia Monocromatica / Monospace - Inconsolata como fuente principal default */
+      --font-ui: "Inconsolata", monospace;
+      --font-subtitles: "Inconsolata", monospace;
       --transition-smooth: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
@@ -301,10 +301,10 @@
       left: 0;
       min-width: 250px;
       max-width: 340px;
-      background: #111116;
-      border: 1px solid var(--border-hover);
+      background: #000000;
+      border: 1px solid var(--border-color);
       border-radius: 4px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.85);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.95);
       z-index: 150;
       padding: 0.35rem 0;
       animation: modal-fade-in 0.12s ease-out;
@@ -357,13 +357,13 @@
     }
 
     .slicer-chk-item:hover {
-      background: rgba(0, 240, 255, 0.08);
+      background: rgba(255, 255, 255, 0.08);
       color: #ffffff;
     }
 
     .slicer-chk-item input[type="checkbox"] {
       cursor: pointer;
-      accent-color: #00f0ff;
+      accent-color: #d4d4d8;
       margin: 0;
       width: 14px;
       height: 14px;
@@ -490,7 +490,7 @@
 
     .analytics-row-bottom {
       display: grid;
-      grid-template-columns: 1.2fr clamp(200px, 18vw, 260px) clamp(240px, 22vw, 320px);
+      grid-template-columns: 1fr clamp(240px, 22vw, 320px) clamp(240px, 22vw, 320px);
       gap: 1rem;
       align-items: stretch;
       width: 100%;
@@ -548,26 +548,28 @@
     .table-ms {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.68rem;
+      font-size: 0.8rem;
       font-family: var(--font-ui);
-      table-layout: auto;
+      table-layout: fixed;
     }
 
     .table-ms thead th {
       position: sticky;
       top: 0;
-      background: #141419;
-      color: var(--text-muted);
+      background: #000000;
+      color: #e4e4e7;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.02em;
-      padding: 0.45rem 0.4rem;
+      letter-spacing: 0.03em;
+      padding: 0.5rem 0.55rem;
       border-bottom: 1px solid var(--border-color);
-      border-right: 1px solid rgba(255, 255, 255, 0.22);
+      border-right: 1px solid var(--border-color);
       text-align: right;
       z-index: 2;
-      font-size: 0.6rem;
-      line-height: 1.2;
+      font-size: 0.72rem;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .table-ms thead th:last-child {
@@ -576,6 +578,19 @@
 
     .table-ms thead th:first-child {
       text-align: left;
+      width: 32%;
+    }
+
+    .table-ms thead th:nth-child(2) {
+      width: 24%;
+    }
+
+    .table-ms thead th:nth-child(3) {
+      width: 22%;
+    }
+
+    .table-ms thead th:nth-child(4) {
+      width: 22%;
     }
 
     .table-ms tbody tr {
@@ -588,12 +603,16 @@
     }
 
     .table-ms tbody td {
-      padding: 0.38rem 0.4rem;
+      padding: 0.48rem 0.55rem;
       color: var(--text-primary);
       text-align: right;
       font-variant-numeric: tabular-nums;
-      border-right: 1px solid rgba(255, 255, 255, 0.14);
-      font-size: 0.68rem;
+      border-right: 1px solid var(--border-color);
+      font-size: 0.8rem;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .table-ms tbody td:last-child {
@@ -604,10 +623,19 @@
       text-align: left;
       font-weight: 600;
       color: var(--text-primary);
-      max-width: 80px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      width: 32%;
+    }
+
+    .table-ms tbody td:nth-child(2) {
+      width: 24%;
+    }
+
+    .table-ms tbody td:nth-child(3) {
+      width: 22%;
+    }
+
+    .table-ms tbody td:nth-child(4) {
+      width: 22%;
     }
 
     .table-ms-val-total {
@@ -627,6 +655,7 @@
       text-align: center !important;
       padding: 3rem 0.5rem !important;
       color: var(--text-muted) !important;
+      font-size: 0.78rem !important;
       font-style: italic;
     }
 

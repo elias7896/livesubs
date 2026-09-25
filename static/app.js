@@ -1547,10 +1547,10 @@
       });
     }
 
-    // Tuerca de Control Room (Redirige directamente a /controlroom)
+    // Tuerca de Control Room (Solicita autenticación mediante modal de Access Key)
     if (elements.btnAdminSettings) {
       elements.btnAdminSettings.addEventListener('click', function () {
-        window.location.href = '/controlroom';
+        openAuthModal();
       });
     }
     if (elements.btnAuthClose) {

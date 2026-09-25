@@ -12,11 +12,11 @@
 
   --text-main: #ffffff;
   --text-muted: #a1a1aa;
-  --text-time: #71717a;
+  --text-time: #a1a1aa;
 
-  /* Tipografia Monocromatica / Monospace (Inconsolata y JetBrains Mono para soporte Linux nativo) */
-  --font-subtitles: "Inconsolata", "JetBrains Mono", "Consolas", ui-monospace, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
-  --font-ui: "Inconsolata", "JetBrains Mono", "Consolas", ui-monospace, "SFMono-Regular", Menlo, Monaco, "Liberation Mono", "Courier New", monospace;
+  /* Tipografia Monocromatica / Monospace - Inconsolata como fuente principal default */
+  --font-subtitles: "Inconsolata", monospace;
+  --font-ui: "Inconsolata", monospace;
 
   --font-base-size: 1rem;
   --subtitle-font-size: 1.35rem;
@@ -387,16 +387,16 @@ body.mode-reader {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
+  font-size: 0.74rem;
   color: var(--text-time);
   width: 100%;
 }
 
 .subtitle-time {
   font-family: var(--font-ui);
-  font-size: 0.65rem;
+  font-size: 0.74rem;
   font-weight: 500;
-  opacity: 0.85;
+  opacity: 1;
   letter-spacing: 0.02em;
 }
 
