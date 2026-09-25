@@ -170,6 +170,11 @@ curl "http://localhost:8000/api/sessions/{session_id}/export?format=vtt" -o subt
 curl "http://localhost:8000/api/sessions/{session_id}/export?format=txt" -o subtitles.txt
 ```
 
+### 5. API Key Management & Rate Limit Balancing
+
+- **Single Key (`GROQ_API_KEY`)**: Standard mode. When using Groq Cloud's paid Pay-as-you-go tier, rate limits are high (thousands of RPM/TPM), making a single key sufficient for continuous 24/7 multi-room broadcasting without requiring rotation.
+- **Key Rotation (`GROQ_API_KEYS`)**: Multiple comma-separated keys (`GROQ_API_KEYS=key1,key2,key3`). Primarily designed for the **Free Tier**. If any key encounters HTTP 429 (Rate Limit Exceeded), the worker automatically assigns a 2.5-second cooldown and immediately switches to the next available key in round-robin, preventing live subtitle stalls.
+
 ---
 
 ## Worker CLI Reference
