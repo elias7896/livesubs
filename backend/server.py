@@ -259,11 +259,11 @@ class TelemetryTracker:
             existing["last_seq"] = data.get("seq", existing.get("subtitles_count", 0) + 1)
             existing["subtitles_count"] = existing.get("subtitles_count", 0) + 1
             audio_chunk_dur = float(metrics.get("audio_duration_s") or 0.0)
-            end_t = float(data.get("end_time") or 0.0)
-            existing["duration_seconds"] = max(
-                existing.get("duration_seconds", 0.0) + (audio_chunk_dur if audio_chunk_dur > 0 else 3.0),
-                end_t
-            )
+            if audio_chunk_dur <= 0:
+                start_t = float(data.get("start_time") or 0.0)
+                end_t = float(data.get("end_time") or 0.0)
+                audio_chunk_dur = (end_t - start_t) if end_t > start_t else 3.0
+            existing["duration_seconds"] = round(existing.get("duration_seconds", 0.0) + audio_chunk_dur, 2)
             existing["source_lang"] = data.get("source_lang", existing.get("source_lang", "en"))
             existing["target_lang"] = data.get("target_lang", existing.get("target_lang", "es"))
             existing["last_text_source"] = data.get("text_source", "")
@@ -396,6 +396,8 @@ class TelemetryTracker:
                 total_dur = max(float(item.get("duration_seconds", 0.0)), db_dur)
                 snapshot["duration_seconds"] = round(total_dur, 1)
                 snapshot["audio_minutes"] = round(total_dur / 60.0, 2)
+                snapshot["active_audio_seconds"] = round(total_dur, 1)
+                snapshot["active_minutes"] = round(total_dur / 60.0, 2)
                 snapshot["status"] = computed_status
                 snapshot["viewers"] = manager.get_viewer_count(sid)
                 snapshot["silence_duration_s"] = round(elapsed, 1) if elapsed < 9000 else None

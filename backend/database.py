@@ -234,7 +234,8 @@ class DatabaseManager:
                 cursor.execute("""
                 SELECT s.session_id, s.title, s.source_lang, s.target_lang, s.stream_url, s.created_at, s.updated_at, s.status,
                        COUNT(sub.id) as total_subtitles,
-                       MAX(sub.end_time) as duration_seconds,
+                       COALESCE(SUM(sub.end_time - sub.start_time), 0.0) as duration_seconds,
+                       COALESCE(MAX(sub.end_time), 0.0) as timeline_end_seconds,
                        AVG(sub.latency_ms) as avg_latency_ms
                 FROM sessions s
                 LEFT JOIN subtitles sub ON s.session_id = sub.session_id

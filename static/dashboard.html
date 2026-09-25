@@ -1862,7 +1862,7 @@
           pillAsr: 'ASR Groq',
           pillTrans: 'Traducción',
           chartAvgLabel: 'Promedio ({n} salas)',
-          chartMinutesLabel: 'Minutos de audio:',
+          chartMinutesLabel: 'Minutos de audio activo:',
           chartChunksLabel: 'Peticiones / Bloques:',
           chartStatusLabel: 'Estado:',
           chartAudienceLabel: 'espectadores',
@@ -1975,7 +1975,7 @@
           pillAsr: 'Groq ASR',
           pillTrans: 'Translation',
           chartAvgLabel: 'Average ({n} rooms)',
-          chartMinutesLabel: 'Audio minutes:',
+          chartMinutesLabel: 'Active audio minutes:',
           chartChunksLabel: 'Requests / Chunks:',
           chartStatusLabel: 'Status:',
           chartAudienceLabel: 'viewers',
@@ -2085,7 +2085,7 @@
           pillAsr: 'ASR Groq',
           pillTrans: 'Tradução',
           chartAvgLabel: 'Média ({n} salas)',
-          chartMinutesLabel: 'Minutos de áudio:',
+          chartMinutesLabel: 'Minutos de áudio ativo:',
           chartChunksLabel: 'Requisições / Blocos:',
           chartStatusLabel: 'Estado:',
           chartAudienceLabel: 'espectadores',
@@ -2554,7 +2554,7 @@
                       const session = ctx.raw?._session;
                       const mins = ctx.raw?.y ?? ctx.parsed.y;
                       const chunks = session?.subtitles_count || session?.total_subtitles || 0;
-                      const statusLabel = session?.status === 'live' ? t.pillActive : t.pillInactive;
+                      const statusLabel = (session?.status === 'closed') ? t.pillInactive : t.pillActive;
                       return [
                         ` ${t.chartMinutesLabel} ${mins} min`,
                         ` ${t.chartChunksLabel} ${chunks}`,
@@ -2863,8 +2863,18 @@
         const targetList = (filtered.length > 0 ? filtered : sessions).filter(s => s.status !== 'closed');
         const usageLabels = targetList.map(s => s.title || ('Sala ' + s.session_id));
         const usageValues = targetList.map((s, idx) => {
-          const durSec = s.duration_seconds || ((s.subtitles_count || s.total_subtitles || 0) * 3);
-          const mins = Number((durSec / 60).toFixed(2));
+          let mins = 0;
+          if (typeof s.active_minutes === 'number' && s.active_minutes > 0) {
+            mins = s.active_minutes;
+          } else if (typeof s.audio_minutes === 'number' && s.audio_minutes > 0) {
+            mins = s.audio_minutes;
+          } else if (typeof s.active_audio_seconds === 'number' && s.active_audio_seconds > 0) {
+            mins = Number((s.active_audio_seconds / 60).toFixed(2));
+          } else if (typeof s.duration_seconds === 'number' && s.duration_seconds > 0) {
+            mins = Number((s.duration_seconds / 60).toFixed(2));
+          } else if ((s.subtitles_count || s.total_subtitles || 0) > 0) {
+            mins = Number((((s.subtitles_count || s.total_subtitles || 0) * 3.5) / 60).toFixed(2));
+          }
           return {
             x: s.title || ('Sala ' + s.session_id),
             y: mins,
