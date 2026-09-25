@@ -90,8 +90,8 @@ VAD_MODEL_PATH = next((p for p in _candidate_vad if p and os.path.exists(p)), os
 SILERO_VAD_URL = "https://raw.githubusercontent.com/snakers4/silero-vad/master/src/silero_vad/data/silero_vad.onnx"
 
 GROQ_ASR_MODEL = os.getenv("GROQ_ASR_MODEL", "whisper-large-v3-turbo")
-GROQ_CHAT_MODEL = os.getenv("GROQ_CHAT_MODEL", "llama-3.3-70b-versatile")
-GROQ_FALLBACK_CHAT_MODEL = os.getenv("GROQ_FALLBACK_CHAT_MODEL", "llama-3.1-8b-instant")
+GROQ_CHAT_MODEL = os.getenv("GROQ_CHAT_MODEL", "openai/gpt-oss-120b")
+GROQ_FALLBACK_CHAT_MODEL = os.getenv("GROQ_FALLBACK_CHAT_MODEL", "openai/gpt-oss-20b")
 
 # Matriz Multilingüe y Multisesión
 SESSION_ID_DEFAULT = os.getenv("SESSION_ID", "default").lower().strip()
@@ -449,7 +449,7 @@ class ValkeyPublisher:
 
 
 class SubtitlePipeline:
-    """Orquesta Whisper ASR (con Biasing) y LLaMA MT con rotación de API Keys y Bypass."""
+    """Orquesta Whisper ASR (con Biasing) y LLM MT (gpt-oss-120b / LLaMA) con rotación de API Keys y Bypass."""
 
     def __init__(self, key_rotator: GroqKeyRotator, source_lang: str = "en", target_lang: str = "es", glossary_terms: list[str] = None):
         self.rotator = key_rotator
