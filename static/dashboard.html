@@ -563,7 +563,7 @@
       padding: 0.5rem 0.6rem;
       border-bottom: 1px solid var(--border-color);
       border-right: 1px solid var(--border-color);
-      text-align: right;
+      text-align: center;
       z-index: 2;
       font-size: 0.74rem;
       line-height: 1.3;
@@ -577,7 +577,7 @@
     }
 
     .table-ms thead th:first-child {
-      text-align: left;
+      text-align: center;
       width: 30%;
     }
 
@@ -858,11 +858,11 @@
 
     .room-id-tag {
       color: var(--text-primary);
-      font-size: 0.75rem;
+      font-size: 0.82rem;
       font-weight: 600;
       border: 1px solid var(--border-color);
-      padding: 0.18rem 0.45rem;
-      border-radius: 3px;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
       background: transparent;
       white-space: nowrap;
     }
@@ -870,13 +870,13 @@
     .card-session-title {
       display: flex;
       align-items: baseline;
-      gap: 0.4rem;
+      gap: 0.45rem;
       min-width: 0;
-      line-height: 1.3;
+      line-height: 1.35;
     }
 
     .card-session-title-label {
-      font-size: 0.72rem;
+      font-size: 0.8rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
@@ -885,7 +885,7 @@
     }
 
     .room-title {
-      font-size: 0.8rem;
+      font-size: 0.92rem;
       font-weight: 600;
       color: var(--text-primary);
       white-space: nowrap;
@@ -897,12 +897,12 @@
     .badge-stream {
       display: inline-flex;
       align-items: center;
-      gap: 0.28rem;
-      font-size: 0.65rem;
+      gap: 0.32rem;
+      font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 0.05em;
-      padding: 0.12rem 0.4rem;
-      border-radius: 3px;
+      padding: 0.16rem 0.45rem;
+      border-radius: 4px;
       white-space: nowrap;
       flex-shrink: 0;
       color: #f87171;
@@ -912,8 +912,8 @@
 
     .badge-stream::before {
       content: '';
-      width: 5px;
-      height: 5px;
+      width: 6px;
+      height: 6px;
       border-radius: 50%;
       background: #ef4444;
       box-shadow: 0 0 6px #ef4444;
@@ -927,11 +927,11 @@
     }
 
     .status-pill {
-      font-size: 0.72rem;
+      font-size: 0.78rem;
       font-weight: 600;
       text-transform: uppercase;
-      padding: 0.18rem 0.5rem;
-      border-radius: 3px;
+      padding: 0.2rem 0.55rem;
+      border-radius: 4px;
       border: 1px solid var(--border-color);
       background: transparent;
       white-space: nowrap;
@@ -959,8 +959,8 @@
       border: 1px solid transparent;
       color: var(--text-muted);
       cursor: pointer;
-      padding: 0.25rem 0.35rem;
-      border-radius: 3px;
+      padding: 0.28rem 0.42rem;
+      border-radius: 4px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -979,8 +979,8 @@
       border: 1px solid transparent;
       color: var(--text-muted);
       cursor: pointer;
-      padding: 0.25rem 0.35rem;
-      border-radius: 3px;
+      padding: 0.28rem 0.42rem;
+      border-radius: 4px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -1005,8 +1005,8 @@
       border: 1px solid transparent;
       color: var(--text-muted);
       cursor: pointer;
-      padding: 0.25rem 0.35rem;
-      border-radius: 3px;
+      padding: 0.28rem 0.42rem;
+      border-radius: 4px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -1046,15 +1046,15 @@
 
     .metric-info-btn {
       position: absolute;
-      top: -3px;
-      right: 1px;
-      width: 13px;
-      height: 13px;
+      top: -4px;
+      right: 2px;
+      width: 15px;
+      height: 15px;
       border-radius: 50%;
       border: 1px solid var(--border-color);
       background: var(--bg-surface);
       color: var(--text-muted);
-      font-size: 9px;
+      font-size: 10px;
       font-weight: 700;
       display: inline-flex;
       align-items: center;
@@ -1077,15 +1077,15 @@
       bottom: calc(100% + 7px);
       left: 50%;
       transform: translateX(-50%);
-      width: 190px;
+      width: 220px;
       background-color: var(--bg-surface);
       color: var(--text-primary);
       border: 1px solid var(--border-color);
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75);
-      padding: 0.5rem 0.65rem;
+      padding: 0.6rem 0.75rem;
       border-radius: 4px;
-      font-size: 0.7rem;
-      line-height: 1.35;
+      font-size: 0.82rem;
+      line-height: 1.4;
       text-align: left;
       z-index: 120;
       pointer-events: none;
@@ -1101,7 +1101,7 @@
     }
 
     .metric-value {
-      font-size: 0.95rem;
+      font-size: 1.15rem;
       font-weight: 600;
       color: var(--text-primary);
     }
@@ -1111,11 +1111,11 @@
     }
 
     .metric-label {
-      font-size: 0.65rem;
+      font-size: 0.74rem;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      margin-top: 0.15rem;
+      margin-top: 0.2rem;
     }
 
     /* Alerta de silencio audiovisual */
@@ -1124,7 +1124,7 @@
       color: #ef4444;
       padding: 0.4rem 0.65rem;
       border-radius: 4px;
-      font-size: 0.72rem;
+      font-size: 0.76rem;
       background: transparent;
     }
 
@@ -1133,7 +1133,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.74rem;
+      font-size: 0.82rem;
       color: var(--text-muted);
       padding-top: 0.15rem;
     }
@@ -1162,9 +1162,16 @@
     }
 
     .btn-sm {
-      padding: 0.28rem 0.6rem;
-      font-size: 0.72rem;
-      border-radius: 3px;
+      padding: 0.32rem 0.65rem;
+      font-size: 0.78rem;
+      border-radius: 4px;
+    }
+
+    .btn-action-icon {
+      padding: 0.32rem 0.55rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .btn-danger {
@@ -1206,7 +1213,7 @@
 
     .dropdown-item {
       padding: 0.45rem 0.8rem;
-      font-size: 0.75rem;
+      font-size: 0.82rem;
       font-family: var(--font-ui);
       color: var(--text-primary);
       text-decoration: none;
@@ -2348,10 +2355,10 @@
                   borderWidth: 2,
                   fill: false,
                   tension: 0.35,
-                  pointRadius: 2.5,
-                  pointHoverRadius: 5,
+                  pointRadius: 0,
+                  pointHoverRadius: 4,
                   pointBackgroundColor: '#00f0ff',
-                  pointBorderColor: '#000000',
+                  pointBorderColor: '#00f0ff',
                   pointBorderWidth: 1
                 },
                 {
@@ -2360,13 +2367,12 @@
                   borderColor: '#ff9500',
                   backgroundColor: 'transparent',
                   borderWidth: 1.8,
-                  borderDash: [4, 3],
                   fill: false,
                   tension: 0.35,
-                  pointRadius: 2.5,
-                  pointHoverRadius: 5,
+                  pointRadius: 0,
+                  pointHoverRadius: 4,
                   pointBackgroundColor: '#ff9500',
-                  pointBorderColor: '#000000',
+                  pointBorderColor: '#ff9500',
                   pointBorderWidth: 1
                 },
                 {
@@ -2377,10 +2383,10 @@
                   borderWidth: 1.8,
                   fill: false,
                   tension: 0.35,
-                  pointRadius: 2.5,
-                  pointHoverRadius: 5,
+                  pointRadius: 0,
+                  pointHoverRadius: 4,
                   pointBackgroundColor: '#f43f5e',
-                  pointBorderColor: '#000000',
+                  pointBorderColor: '#f43f5e',
                   pointBorderWidth: 1
                 }
               ]
@@ -3234,7 +3240,7 @@
                       onclick="openEditSessionModal('${safeSessionId}')" 
                       title="${t.btnEditTitle || 'Editar sesión'}" 
                       aria-label="${t.btnEditTitle || 'Editar sesión'}">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
@@ -3244,18 +3250,18 @@
                       title="${isInactive ? t.btnResumeTitle : t.btnPauseTitle}" 
                       aria-label="${isInactive ? t.btnResumeTitle : t.btnPauseTitle}">
                 ${isInactive ? `
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                     <polygon points="6 4 19 12 6 20 6 4"></polygon>
                   </svg>
                 ` : `
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                     <rect x="6" y="4" width="3.5" height="16" rx="1"></rect>
                     <rect x="14.5" y="4" width="3.5" height="16" rx="1"></rect>
                   </svg>
                 `}
               </button>
               <button class="btn-trash" onclick="deleteSession('${safeSessionId}')" title="${t.btnDeleteTitle}" aria-label="${t.btnDeleteTitle}">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                 </svg>
@@ -3312,7 +3318,7 @@
                         onclick="toggleDownloadMenu(event, '${safeSessionId}')" 
                         ${!isInactive ? `disabled title="${t.downloadDisabledTooltip}"` : `title="${t.downloadTooltip}"`}>
                   <span>${t.btnDownload}</span>
-                  <svg class="dropdown-arrow-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <svg class="dropdown-arrow-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="6 9 12 15 18 9"></polyline>
                   </svg>
                 </button>
@@ -3331,17 +3337,23 @@
             </div>
 
             <div class="btn-group btn-group-actions">
-              <!-- Boton OBS Link con icono de enlace / URL (tipo 8 horizontal) -->
-              <button class="btn btn-sm" onclick="copyText('${overlayUrl}', '${toastCopyMsg}')" title="${t.btnObsTitle}">
-                <svg class="icon-link" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right: 0.2rem;">
+              <!-- Boton OBS Link con icono de enlace / URL (solo icono) -->
+              <button class="btn btn-sm btn-action-icon" onclick="copyText('${overlayUrl}', '${toastCopyMsg}')" title="${t.btnObsTitle || 'Copiar OBS Link'}" aria-label="${t.btnObsTitle || 'Copiar OBS Link'}">
+                <svg class="icon-link" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
                   <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
                 </svg>
-                <span>${t.btnObsLink}</span>
               </button>
 
-              <a href="${readerUrl}" target="_blank" class="btn btn-sm" title="${t.btnOpenReaderTitle}">
-                ${t.btnOpenReader}
+              <!-- Boton Modo Lector con icono de cuaderno / hoja (solo icono) -->
+              <a href="${readerUrl}" target="_blank" class="btn btn-sm btn-action-icon" title="${t.btnOpenReaderTitle || 'Abrir lector'}" aria-label="${t.btnOpenReaderTitle || 'Abrir lector'}">
+                <svg class="icon-reader" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
               </a>
             </div>
           </div>
@@ -3422,7 +3434,7 @@
           editBtn.className = 'btn-edit';
           editBtn.setAttribute('onclick', `openEditSessionModal('${safeSessionId}')`);
           editBtn.innerHTML = `
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
             </svg>
@@ -3457,16 +3469,20 @@
             pauseBtn.setAttribute('aria-label', pauseTitle);
             pauseBtn.setAttribute('onclick', `toggleSessionPause('${safeSessionId}', ${isInactive})`);
             pauseBtn.innerHTML = isInactive ? `
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                 <polygon points="6 4 19 12 6 20 6 4"></polygon>
               </svg>
             ` : `
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                 <rect x="6" y="4" width="3.5" height="16" rx="1"></rect>
                 <rect x="14.5" y="4" width="3.5" height="16" rx="1"></rect>
               </svg>
             `;
           }
+        }
+        if (trashBtn && trashBtn.title !== t.btnDeleteTitle) {
+          trashBtn.title = t.btnDeleteTitle;
+          trashBtn.setAttribute('aria-label', t.btnDeleteTitle);
         }
 
         // Limpiar banner de silencio si existía previamente
@@ -3528,11 +3544,44 @@
           }
         }
 
-        // Botón Finalizar Sesión (Eliminado)
+        // Botones de acciones inferiores (OBS link y Open Reader como iconos)
         const btnGroupActions = card.querySelector('.btn-group-actions');
         if (btnGroupActions) {
           const btnEnd = btnGroupActions.querySelector('.btn-end-session');
           if (btnEnd) btnEnd.remove();
+
+          const btnObs = btnGroupActions.querySelector('button');
+          if (btnObs) {
+            btnObs.title = t.btnObsTitle || 'Copiar OBS Link';
+            btnObs.setAttribute('aria-label', t.btnObsTitle || 'Copiar OBS Link');
+            if (!btnObs.classList.contains('btn-action-icon')) {
+              btnObs.className = 'btn btn-sm btn-action-icon';
+              btnObs.innerHTML = `
+                <svg class="icon-link" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                </svg>
+              `;
+            }
+          }
+
+          const btnReader = btnGroupActions.querySelector('a');
+          if (btnReader) {
+            btnReader.title = t.btnOpenReaderTitle || 'Abrir lector';
+            btnReader.setAttribute('aria-label', t.btnOpenReaderTitle || 'Abrir lector');
+            if (!btnReader.classList.contains('btn-action-icon')) {
+              btnReader.className = 'btn btn-sm btn-action-icon';
+              btnReader.innerHTML = `
+                <svg class="icon-reader" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+              `;
+            }
+          }
         }
       }
 
