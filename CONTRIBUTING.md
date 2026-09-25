@@ -33,7 +33,7 @@ Gracias por tu interes en contribuir a este proyecto Open Source. Tu ayuda es fu
    Verifica que la integracion funcione antes de hacer commit:
    ```bash
    ./start.sh
-   ./venv/bin/python worker.py --file sample_jfk.wav
+   ./venv/bin/python backend/worker.py --file sample_jfk.wav
    ./stop.sh
    ```
 

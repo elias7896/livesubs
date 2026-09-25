@@ -37,7 +37,7 @@ if [ -f ".server.pid" ]; then
     fi
     rm -f .server.pid
 fi
-pkill -f "uvicorn server:app" 2>/dev/null || true
+pkill -f "uvicorn.*server:app" 2>/dev/null || true
 
 # 3. Detener Worker en caso de que haya quedado corriendo en segundo plano
 pkill -f "worker.py" 2>/dev/null || true

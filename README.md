@@ -119,20 +119,20 @@ El script levantará Valkey, FastAPI y un túnel efímero con URL pública `http
 En tu terminal:
 ```bash
 # Iniciar con tu micrófono por defecto (EN -> ES):
-./venv/bin/python worker.py
+./venv/bin/python backend/worker.py
 
 # Transcripción Nativa Directa en Español (ES -> ES, con Bypass de traducción):
-./venv/bin/python worker.py --source-lang es --target-lang es
+./venv/bin/python backend/worker.py --source-lang es --target-lang es
 
 # Traducir de Inglés a Portugués (EN -> PT):
-./venv/bin/python worker.py --source-lang en --target-lang pt
+./venv/bin/python backend/worker.py --source-lang en --target-lang pt
 
 # Listar dispositivos para elegir tu micrófono:
-./venv/bin/python worker.py --list-devices
-./venv/bin/python worker.py --device 0
+./venv/bin/python backend/worker.py --list-devices
+./venv/bin/python backend/worker.py --device 0
 
 # O probar con archivo WAV pregrabado:
-./venv/bin/python worker.py --file sample_jfk.wav
+./venv/bin/python backend/worker.py --file sample_jfk.wav
 ```
 
 ---
@@ -210,7 +210,7 @@ Puedes adaptar el glosario a cualquier temática simplemente editando el archivo
 
 3. **Vía línea de comandos (CLI)**:
    ```bash
-   ./venv/bin/python worker.py --glossary glosarios/deportes.txt --stream-url "https://..."
+   ./venv/bin/python backend/worker.py --glossary glosarios/deportes.txt --stream-url "https://..."
    ```
 
 ---
@@ -266,11 +266,11 @@ El sistema soporta transmisiones simultáneas en múltiples salas (ej. `stage-1`
 - **Rotación Multi-API Key de Groq:** Puedes especificar múltiples claves en `.env` (`GROQ_API_KEYS=key1,key2,key3`). El sistema rota automáticamente entre ellas y aplica un cooldown de 60 segundos si alguna alcanza el rate limit (HTTP 429).
 - **Iniciar un worker en una sala específica:**
   ```bash
-  ./venv/bin/python worker.py --session-id stage-1 --source-lang en --target-lang es
+  ./venv/bin/python backend/worker.py --session-id stage-1 --source-lang en --target-lang es
   ```
 - **Simular 5 salas concurrentes para pruebas de carga:**
   ```bash
-  ./venv/bin/python simulate_sessions.py --rooms stage-1 stage-2 stage-3 stage-4 stage-5 --chunks 5
+  ./venv/bin/python scripts/simulate_sessions.py --rooms stage-1 stage-2 stage-3 stage-4 stage-5 --chunks 5
   ```
 
 ---
@@ -288,7 +288,7 @@ Panel de monitoreo para operadores audiovisuales accesible en `http://localhost:
 
 | Modo | Compatibilidad | Recomendación |
 | :--- | :--- | :--- |
-| **Worker Nativo (`worker.py`)** | **Universal:** Linux, macOS, Windows | **Recomendado:** Accede directamente a la tarjeta de sonido y micrófonos USB/Bluetooth sin latencia adicional ni permisos complejos. |
+| **Worker Nativo (`backend/worker.py`)** | **Universal:** Linux, macOS, Windows | **Recomendado:** Accede directamente a la tarjeta de sonido y micrófonos USB/Bluetooth sin latencia adicional ni permisos complejos. |
 | **Worker en Docker (`--profile with-worker`)** | **Linux únicamente** | Adecuado para servidores headless o máquinas Linux dedicadas pasando `--device /dev/snd:/dev/snd`. |
 
 ---

@@ -434,11 +434,7 @@ class StreamWorkerManager:
 
         venv_python = os.path.join(BASE_DIR, "venv", "bin", "python")
         python_bin = venv_python if os.path.exists(venv_python) else sys.executable
-        worker_script = (
-            os.path.join(BASE_DIR, "backend", "worker.py")
-            if os.path.exists(os.path.join(BASE_DIR, "backend", "worker.py"))
-            else os.path.join(BASE_DIR, "worker.py")
-        )
+        worker_script = os.path.join(BASE_DIR, "backend", "worker.py")
         cmd = [
             python_bin,
             worker_script,

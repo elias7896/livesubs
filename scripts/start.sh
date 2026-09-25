@@ -32,11 +32,11 @@ else
 fi
 
 # 2. Iniciar Gateway FastAPI con Uvicorn
-echo "[2/3] Iniciando Gateway WebSockets (server.py)..."
+echo "[2/3] Iniciando Gateway WebSockets (backend.server)..."
 if [ -f ".server.pid" ] && kill -0 "$(cat .server.pid)" 2>/dev/null; then
     echo "      El servidor ya esta corriendo (PID: $(cat .server.pid))."
 else
-    setsid ./venv/bin/uvicorn server:app --host 0.0.0.0 --port 8000 > server.log 2>&1 < /dev/null &
+    setsid ./venv/bin/uvicorn backend.server:app --host 0.0.0.0 --port 8000 > server.log 2>&1 < /dev/null &
     SERVER_PID=$!
     echo $SERVER_PID > .server.pid
     echo "      Servidor FastAPI iniciado en background (PID: $SERVER_PID)."
@@ -105,11 +105,11 @@ echo "--------------------------------------------------------------------"
 echo "Para capturar audio y transmitir en vivo, corre en otra terminal:"
 echo ""
 echo "   # Opcion A (Tu Microfono en vivo):"
-echo "   ./venv/bin/python worker.py"
+echo "   ./venv/bin/python backend/worker.py"
 echo ""
 echo "   # Opcion B (Prueba con Audio WAV pregrabado):"
-echo "   ./venv/bin/python worker.py --file sample_jfk.wav"
+echo "   ./venv/bin/python backend/worker.py --file sample_jfk.wav"
 echo ""
 echo "Para apagar el servidor y el tunel al finalizar, ejecuta:"
-echo "   ./stop.sh"
+echo "   ./scripts/stop.sh"
 echo "===================================================================="

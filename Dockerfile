@@ -31,7 +31,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY models/ ./models/
 COPY scripts/ ./scripts/
-COPY server.py worker.py database.py exporters.py ./
 COPY static/ ./static/
 
 # Asegurar permisos correctos
@@ -47,4 +46,4 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Comando por defecto para iniciar el servidor
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "backend.server:app", "--host", "0.0.0.0", "--port", "8000"]
