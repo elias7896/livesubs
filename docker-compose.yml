@@ -1,0 +1,86 @@
+version: '3.8'
+
+# ==============================================================================
+# Docker Compose - Live Subtitle & Translation System
+# Despliega Valkey (in-memory) + FastAPI Gateway en una red interna unificada
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Broker & Caché: Valkey (Redis-compatible)
+  # ----------------------------------------------------------------------------
+  valkey:
+    image: valkey/valkey:7.2-alpine
+    container_name: live-subtitles-valkey
+    restart: unless-stopped
+    command: >
+      valkey-server
+      --save ""
+      --appendonly no
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - live-subs-net
+
+  # ----------------------------------------------------------------------------
+  # 2. Servidor Gateway WebSockets & Frontend
+  # ----------------------------------------------------------------------------
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: live-subtitles-gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - VALKEY_HOST=valkey
+      - VALKEY_PORT=6379
+      - VALKEY_CHANNEL=subtitles:live
+      - VALKEY_HISTORY_KEY=subtitles:history
+      - HOST=0.0.0.0
+      - PORT=8000
+    depends_on:
+      valkey:
+        condition: service_healthy
+    networks:
+      - live-subs-net
+
+  # ----------------------------------------------------------------------------
+  # 3. Audio Ingestion Worker (Opcional en Linux con acceso a micrófono del host)
+  #    Ejecutar con: docker compose --profile with-worker up -d
+  # ----------------------------------------------------------------------------
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: live-subtitles-worker
+    restart: unless-stopped
+    profiles: ["with-worker"]
+    devices:
+      - "/dev/snd:/dev/snd"
+    group_add:
+      - "audio"
+    env_file:
+      - .env
+    environment:
+      - VALKEY_HOST=valkey
+      - VALKEY_PORT=6379
+    command: ["python", "backend/worker.py"]
+    depends_on:
+      valkey:
+        condition: service_healthy
+    networks:
+      - live-subs-net
+
+networks:
+  live-subs-net:
+    name: live-subtitles-network
+    driver: bridge
