@@ -77,8 +77,8 @@ VALKEY_PORT = int(os.getenv("VALKEY_PORT", "6379"))
 VALKEY_CHANNEL = os.getenv("VALKEY_CHANNEL", "subtitles:live")
 VALKEY_HISTORY_KEY = os.getenv("VALKEY_HISTORY_KEY", "subtitles:history")
 
-CHUNK_SECONDS = float(os.getenv("CHUNK_SECONDS", "4.5"))
-MAX_CHUNK_SECONDS = float(os.getenv("MAX_CHUNK_SECONDS", "7.5"))
+CHUNK_SECONDS = float(os.getenv("CHUNK_SECONDS", "8.0"))
+MAX_CHUNK_SECONDS = float(os.getenv("MAX_CHUNK_SECONDS", "12.0"))
 SAMPLE_RATE = int(os.getenv("SAMPLE_RATE", "16000"))
 _candidate_vad = [
     os.getenv("VAD_MODEL_PATH", ""),
@@ -111,8 +111,8 @@ GLOSSARY_TERMS_DEFAULT = os.getenv("GLOSSARY_TERMS", "")
 # Parámetros de VAD
 VAD_WINDOW_SIZE = 512  # 32ms a 16kHz
 VAD_THRESHOLD = float(os.getenv("VAD_THRESHOLD", "0.5"))
-PAUSE_SILENCE_SECONDS = float(os.getenv("PAUSE_SILENCE_SECONDS", "0.58"))
-MIN_SPEECH_DURATION = float(os.getenv("MIN_SPEECH_DURATION", "0.45"))
+PAUSE_SILENCE_SECONDS = float(os.getenv("PAUSE_SILENCE_SECONDS", "0.65"))
+MIN_SPEECH_DURATION = float(os.getenv("MIN_SPEECH_DURATION", "0.50"))
 
 # Mapeo de Idiomas
 LANG_NAMES = {
@@ -687,6 +687,8 @@ class AudioWorker:
         self.seq_counter = last_seq
         self.start_offset_s = last_end_time
         self.session_created_ts = session_created_ts
+        self.is_live = False
+        self.current_audio_time = last_end_time
 
         self.glossary_terms = load_glossary(glossary_file, GLOSSARY_TERMS_DEFAULT)
         start_idx = abs(hash(self.session_id)) % max(len(GROQ_API_KEYS), 1)
@@ -714,20 +716,20 @@ class AudioWorker:
         self.running.set()
 
         frames_per_sec = SAMPLE_RATE / VAD_WINDOW_SIZE  # 31.25 fps
-        self.preroll_len = max(8, int(0.35 * frames_per_sec))  # ~350ms (11 frames) de pre-roll para no cortar inicio de palabras
+        self.preroll_len = max(10, int(0.35 * frames_per_sec))  # ~350ms (11 frames) de pre-roll para no cortar inicio de palabras
         self.preroll = deque(maxlen=self.preroll_len)
         self.accumulated_frames = []
         self.in_speech = False
         self.consecutive_silent_frames = 0
 
-        self.target_frames = int(CHUNK_SECONDS * frames_per_sec)
-        self.max_elastic_frames = int(MAX_CHUNK_SECONDS * frames_per_sec)
+        self.target_frames = int(CHUNK_SECONDS * frames_per_sec)  # ~8.0s (250 frames)
+        self.max_elastic_frames = int(MAX_CHUNK_SECONDS * frames_per_sec)  # ~12.0s (375 frames)
         self.max_frames = self.target_frames
         self.min_speech_frames = int(MIN_SPEECH_DURATION * frames_per_sec)
-        self.pause_silence_frames = int(PAUSE_SILENCE_SECONDS * frames_per_sec)
-        self.micro_pause_frames = max(6, int(0.28 * frames_per_sec))  # ~280ms micro-pausa entre oraciones (evita cortes intra-palabra)
-        self.postroll_frames = max(3, int(0.12 * frames_per_sec))  # ~120ms post-roll para final suave de palabra
-        self.overlap_frames = max(4, int(0.16 * frames_per_sec))  # ~160ms solapamiento en cortes forzados elásticos
+        self.pause_silence_frames = int(PAUSE_SILENCE_SECONDS * frames_per_sec)  # ~650ms pausa natural de fin de frase
+        self.clause_pause_frames = max(8, int(0.45 * frames_per_sec))  # ~450ms pausa de cláusula tras 8s de habla continua
+        self.postroll_frames = max(4, int(0.15 * frames_per_sec))  # ~150ms post-roll para final suave de palabra
+        self.overlap_frames = max(6, int(0.20 * frames_per_sec))  # ~200ms solapamiento en cortes forzados elásticos
 
         self.request_timestamps = deque()
         self.rpm_lock = threading.Lock()
@@ -787,17 +789,21 @@ class AudioWorker:
 
             try:
                 if isinstance(task_item, tuple):
-                    audio_chunk, emit_time = task_item
+                    if len(task_item) == 3:
+                        audio_chunk, emit_time, emit_audio_pos = task_item
+                    else:
+                        audio_chunk, emit_time = task_item
+                        emit_audio_pos = 0.0
                 else:
-                    audio_chunk, emit_time = task_item, time.time()
+                    audio_chunk, emit_time, emit_audio_pos = task_item, time.time(), 0.0
 
                 start_infer_time = time.time()
                 queue_lat_ms = (start_infer_time - emit_time) * 1000
                 chunk_duration_s = len(audio_chunk) / SAMPLE_RATE
 
-                # Protección anti-congestión: si el chunk esperó > 4.5s en cola por lag o red,
-                # descartarlo para volver inmediatamente al vivo y evitar latencias acumuladas
-                if queue_lat_ms > 4500:
+                # Protección anti-congestión: solo en streams en vivo si el retraso acumulado supera los 12s
+                # En videos VOD nunca se purgan fragmentos para no perder alocución
+                if getattr(self, "is_live", False) and queue_lat_ms > 12000:
                     logger.warning(f"Purgando chunk atrasado ({queue_lat_ms/1000:.1f}s en cola) para recuperar el vivo.")
                     continue
 
@@ -840,7 +846,10 @@ class AudioWorker:
                 if text_target or clean_source:
                     self.seq_counter += 1
                     # Timestamps relativos al inicio de la sesión (acumulativo si se reanudó)
-                    rel_end_time = max(0.0, (emit_time - self.session_start_time) + self.start_offset_s)
+                    if not getattr(self, "is_live", False) and emit_audio_pos > 0:
+                        rel_end_time = round(emit_audio_pos, 2)
+                    else:
+                        rel_end_time = max(0.0, (emit_time - self.session_start_time) + self.start_offset_s)
                     rel_start_time = max(0.0, rel_end_time - chunk_duration_s)
 
                     metrics_data = {
@@ -892,8 +901,9 @@ class AudioWorker:
             if total_frames >= self.min_speech_frames:
                 chunk_array = np.concatenate(frames_to_send)
                 emit_time = time.time()
+                emit_audio_pos = self.current_audio_time
                 try:
-                    self.inference_queue.put_nowait((chunk_array, emit_time))
+                    self.inference_queue.put_nowait((chunk_array, emit_time, emit_audio_pos))
                 except queue.Full:
                     logger.warning("Cola de inferencia llena, descartando chunk.")
 
@@ -905,7 +915,7 @@ class AudioWorker:
             return
 
         # Corte por pausa o fin de alocución:
-        # 1. Preservar un post-roll suave (ej. ~120ms) para garantizar que la última consonante/vocal no se mutile
+        # 1. Preservar un post-roll suave (ej. ~150ms) para garantizar que la última consonante/vocal no se mutile
         excess_silence = max(0, self.consecutive_silent_frames - self.postroll_frames)
         if excess_silence > 0 and len(self.accumulated_frames) > excess_silence:
             frames_to_send = self.accumulated_frames[:-excess_silence]
@@ -918,8 +928,9 @@ class AudioWorker:
         if total_frames >= self.min_speech_frames:
             chunk_array = np.concatenate(frames_to_send)
             emit_time = time.time()
+            emit_audio_pos = self.current_audio_time
             try:
-                self.inference_queue.put_nowait((chunk_array, emit_time))
+                self.inference_queue.put_nowait((chunk_array, emit_time, emit_audio_pos))
             except queue.Full:
                 logger.warning("Cola de inferencia llena, descartando chunk.")
 
@@ -935,6 +946,7 @@ class AudioWorker:
         self.vad.reset_state()
 
     def process_frame(self, frame: np.ndarray):
+        self.current_audio_time += (len(frame) / SAMPLE_RATE)
         is_speech = self.vad.is_speech(frame, threshold=VAD_THRESHOLD)
 
         if is_speech:
@@ -945,7 +957,7 @@ class AudioWorker:
             self.accumulated_frames.append(frame)
             self.consecutive_silent_frames = 0
 
-            # Límite elástico absoluto: solo cortar si alcanzamos el techo máximo permitido
+            # Límite elástico absoluto de seguridad (12.0s): solo cortar si el orador habla sin parar
             if len(self.accumulated_frames) >= self.max_elastic_frames:
                 self._emit_current_chunk(is_forced_cut=True)
         else:
@@ -954,11 +966,11 @@ class AudioWorker:
                 self.accumulated_frames.append(frame)
 
                 curr_len = len(self.accumulated_frames)
-                # 1. Si hubo una pausa natural completa de habla (ej. 0.58s), emitir
+                # 1. Fin natural de oración: el orador terminó de hablar o hizo una pausa real (ej. 0.65s)
                 if self.consecutive_silent_frames >= self.pause_silence_frames:
                     self._emit_current_chunk(is_forced_cut=False)
-                # 2. Corte elástico: si superamos la duración objetivo (~4.5s) y hay una micro-pausa entre palabras (~280ms), emitir
-                elif curr_len >= self.target_frames and self.consecutive_silent_frames >= self.micro_pause_frames:
+                # 2. Cláusula sintáctica amplia: solo tras 8s de habla continua y con una pausa clara (>= 0.45s)
+                elif curr_len >= self.target_frames and self.consecutive_silent_frames >= self.clause_pause_frames:
                     self._emit_current_chunk(is_forced_cut=False)
                 # 3. Límite elástico absoluto de seguridad en silencio
                 elif curr_len >= self.max_elastic_frames:
@@ -1067,6 +1079,7 @@ class AudioWorker:
                                 is_currently_live = bool(info.get('is_live')) or (info.get('live_status') == 'is_live')
                                 if is_currently_live or force_live:
                                     is_live = True
+                                self.is_live = is_live
                                 user_agent = info.get('http_headers', {}).get('User-Agent')
                                 title = info.get('title')
                                 duration = info.get('duration')
@@ -1171,8 +1184,6 @@ class AudioWorker:
 
                         frames_read_successfully += 1
                         frame_count += 1
-                        if not is_live:
-                            self.start_offset_s += (VAD_WINDOW_SIZE / SAMPLE_RATE)
 
                         target_wall_time = start_decode_time + (frame_count * (VAD_WINDOW_SIZE / SAMPLE_RATE))
                         delay = target_wall_time - time.time()
