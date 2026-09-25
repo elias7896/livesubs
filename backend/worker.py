@@ -1244,9 +1244,15 @@ class AudioWorker:
         except KeyboardInterrupt:
             logger.info("Detención manual solicitada por el usuario.")
         finally:
-            self._emit_current_chunk()
-            self.inference_queue.join()
             self.stop()
+            try:
+                if 'proc' in locals() and proc and proc.poll() is None:
+                    proc.terminate()
+                    proc.wait(timeout=1.0)
+            except Exception:
+                pass
+            if hasattr(self, 'inference_thread') and self.inference_thread.is_alive():
+                self.inference_thread.join(timeout=0.8)
 
     def run(self, input_device=None):
         self.session_start_time = time.time()

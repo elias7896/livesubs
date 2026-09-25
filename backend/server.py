@@ -12,6 +12,7 @@ import asyncio
 import json
 import logging
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -497,7 +498,7 @@ class StreamWorkerManager:
                 logger.info(f"Deteniendo worker de stream '{sid}' (PID: {proc.pid})...")
                 try:
                     proc.terminate()
-                    await asyncio.to_thread(proc.wait, timeout=3.0)
+                    await asyncio.to_thread(proc.wait, timeout=1.5)
                 except Exception:
                     try:
                         proc.kill()
@@ -750,13 +751,6 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan
 )
-
-@app.middleware("http")
-async def handle_shutdown_cancellation_middleware(request: Request, call_next):
-    try:
-        return await call_next(request)
-    except asyncio.CancelledError:
-        return Response(status_code=204)
 
 app.add_middleware(
     CORSMiddleware,
@@ -1131,13 +1125,15 @@ async def get_telemetry():
 
 
 @app.get("/api/telemetry/stream")
-async def stream_telemetry():
+async def stream_telemetry(request: Request):
     """
     Transmisión SSE (Server-Sent Events) en vivo para el Dashboard Audiovisual.
     Emite actualizaciones cada 1.5s sin sobrecargar el servidor.
     """
     async def event_generator():
         while not shutdown_event.is_set():
+            if await request.is_disconnected():
+                break
             try:
                 snapshots = await telemetry.get_all_snapshots(manager)
                 data = {
