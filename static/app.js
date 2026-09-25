@@ -600,9 +600,8 @@
     elements.homeSessionsList.innerHTML = activeSessions.map(s => {
       const sid = (s.session_id || '').toLowerCase().trim();
       const title = s.title || ('Sala ' + sid.charAt(0).toUpperCase() + sid.slice(1));
-      const srcLang = (s.source_lang && s.source_lang !== 'auto' ? s.source_lang : 'EN').toUpperCase();
-      const tgtLang = (s.target_lang || 'ES').toUpperCase();
-      const langBadge = `${srcLang} -> ${tgtLang}`;
+      const sessionLang = (s.source_lang && s.source_lang !== 'auto' ? s.source_lang : 'ES').toUpperCase();
+      const langBadge = sessionLang;
       return `
         <a href="/?session=${encodeURIComponent(sid)}" class="home-session-item" data-session-id="${sid}">
           <div class="home-session-left">

@@ -482,7 +482,7 @@
 
     .analytics-row-top {
       display: grid;
-      grid-template-columns: 1fr clamp(240px, 22vw, 320px);
+      grid-template-columns: 1fr clamp(380px, 32vw, 480px);
       gap: 1rem;
       align-items: stretch;
       width: 100%;
@@ -548,7 +548,7 @@
     .table-ms {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.8rem;
+      font-size: 0.82rem;
       font-family: var(--font-ui);
       table-layout: fixed;
     }
@@ -560,12 +560,12 @@
       color: #e4e4e7;
       font-weight: 600;
       letter-spacing: 0.03em;
-      padding: 0.5rem 0.55rem;
+      padding: 0.5rem 0.6rem;
       border-bottom: 1px solid var(--border-color);
       border-right: 1px solid var(--border-color);
       text-align: right;
       z-index: 2;
-      font-size: 0.72rem;
+      font-size: 0.74rem;
       line-height: 1.3;
       white-space: nowrap;
       overflow: hidden;
@@ -578,11 +578,11 @@
 
     .table-ms thead th:first-child {
       text-align: left;
-      width: 32%;
+      width: 30%;
     }
 
     .table-ms thead th:nth-child(2) {
-      width: 24%;
+      width: 25%;
     }
 
     .table-ms thead th:nth-child(3) {
@@ -590,7 +590,7 @@
     }
 
     .table-ms thead th:nth-child(4) {
-      width: 22%;
+      width: 23%;
     }
 
     .table-ms tbody tr {
@@ -603,12 +603,12 @@
     }
 
     .table-ms tbody td {
-      padding: 0.48rem 0.55rem;
+      padding: 0.48rem 0.6rem;
       color: var(--text-primary);
       text-align: right;
       font-variant-numeric: tabular-nums;
       border-right: 1px solid var(--border-color);
-      font-size: 0.8rem;
+      font-size: 0.82rem;
       line-height: 1.3;
       white-space: nowrap;
       overflow: hidden;
@@ -623,11 +623,11 @@
       text-align: left;
       font-weight: 600;
       color: var(--text-primary);
-      width: 32%;
+      width: 30%;
     }
 
     .table-ms tbody td:nth-child(2) {
-      width: 24%;
+      width: 25%;
     }
 
     .table-ms tbody td:nth-child(3) {
@@ -635,7 +635,7 @@
     }
 
     .table-ms tbody td:nth-child(4) {
-      width: 22%;
+      width: 23%;
     }
 
     .table-ms-val-total {
@@ -894,8 +894,7 @@
       min-width: 0;
     }
 
-    .badge-stream,
-    .badge-video {
+    .badge-stream {
       display: inline-flex;
       align-items: center;
       gap: 0.28rem;
@@ -906,36 +905,18 @@
       border-radius: 3px;
       white-space: nowrap;
       flex-shrink: 0;
-    }
-
-    .badge-stream::before,
-    .badge-video::before {
-      content: '';
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-    }
-
-    .badge-stream {
       color: #f87171;
       background: rgba(239, 68, 68, 0.12);
       border: 1px solid rgba(239, 68, 68, 0.35);
     }
 
     .badge-stream::before {
+      content: '';
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
       background: #ef4444;
       box-shadow: 0 0 6px #ef4444;
-    }
-
-    .badge-video {
-      color: #fca5a5;
-      background: rgba(248, 113, 113, 0.08);
-      border: 1px solid rgba(248, 113, 113, 0.25);
-    }
-
-    .badge-video::before {
-      background: #f87171;
-      box-shadow: 0 0 5px rgba(248, 113, 113, 0.5);
     }
 
     .header-right-actions {
@@ -1678,7 +1659,7 @@
           <input type="url" id="input-stream-url" class="modal-input" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" />
         </div>
         <div class="modal-field">
-          <label id="lbl-modal-source-lang" for="select-source-lang" class="modal-label">Idioma Audio (Origen)</label>
+          <label id="lbl-modal-source-lang" for="select-source-lang" class="modal-label">Idioma del audio de la sesión</label>
           <select id="select-source-lang" class="modal-input">
             <option value="es" selected>Español (ES)</option>
             <option value="en">English (EN)</option>
@@ -1712,7 +1693,7 @@
           <input type="url" id="edit-input-stream-url" class="modal-input" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" />
         </div>
         <div class="modal-field">
-          <label id="lbl-edit-source-lang" for="edit-select-source-lang" class="modal-label">Idioma Audio (Origen)</label>
+          <label id="lbl-edit-source-lang" for="edit-select-source-lang" class="modal-label">Idioma del audio de la sesión</label>
           <select id="edit-select-source-lang" class="modal-input">
             <option value="es">Español (ES)</option>
             <option value="en">English (EN)</option>
@@ -1775,7 +1756,7 @@
           modalIdHelp: 'Solo letras, números y guiones (sin espacios).',
           modalTitleLabel: 'Título descriptivo (opcional)',
           modalTitlePlaceholder: 'ej: Auditorio Principal',
-          modalSourceLangLabel: 'Idioma Audio',
+          modalSourceLangLabel: 'Idioma del audio de la sesión',
           modalTargetLangLabel: 'Idioma Subtítulos',
           modalStreamUrlLabel: 'URL DEL STREAM/VIDEO',
           modalStreamUrlPlaceholder: 'https://www.youtube.com/watch?v=...',
@@ -1796,7 +1777,7 @@
           modalEditTitle: 'Editar Transmisión',
           lblEditTitle: 'Título descriptivo',
           lblEditStreamUrl: 'URL del Stream / Video',
-          lblEditSourceLang: 'Idioma Audio (Origen)',
+          lblEditSourceLang: 'Idioma del audio de la sesión',
           btnEditSave: 'Guardar cambios',
           toastSessionUpdated: 'Sesión "{id}" actualizada con éxito.',
           origLangLabel: 'Lenguaje original:',
@@ -1888,7 +1869,7 @@
           modalIdHelp: 'Letters, numbers, and dashes only (no spaces).',
           modalTitleLabel: 'Descriptive title (optional)',
           modalTitlePlaceholder: 'e.g. Main Auditorium',
-          modalSourceLangLabel: 'Audio Language',
+          modalSourceLangLabel: 'Session audio language',
           modalTargetLangLabel: 'Subtitles Language',
           modalStreamUrlLabel: 'STREAM/VIDEO URL',
           modalStreamUrlPlaceholder: 'https://www.youtube.com/watch?v=...',
@@ -1909,7 +1890,7 @@
           modalEditTitle: 'Edit Transmission',
           lblEditTitle: 'Descriptive title',
           lblEditStreamUrl: 'Stream / Video URL',
-          lblEditSourceLang: 'Audio Language (Source)',
+          lblEditSourceLang: 'Session audio language',
           btnEditSave: 'Save changes',
           toastSessionUpdated: 'Session "{id}" updated successfully.',
           origLangLabel: 'Original language:',
@@ -2001,7 +1982,7 @@
           modalIdHelp: 'Apenas letras, números e hífens (sem espaços).',
           modalTitleLabel: 'Título descritivo (opcional)',
           modalTitlePlaceholder: 'ex: Auditório Principal',
-          modalSourceLangLabel: 'Idioma do Áudio',
+          modalSourceLangLabel: 'Idioma do áudio da sessão',
           modalTargetLangLabel: 'Idioma das Legendas',
           modalStreamUrlLabel: 'URL DA TRANSMISSÃO/VÍDEO',
           modalStreamUrlPlaceholder: 'https://www.youtube.com/watch?v=...',
@@ -2022,7 +2003,7 @@
           modalEditTitle: 'Editar Transmissão',
           lblEditTitle: 'Título descritivo',
           lblEditStreamUrl: 'URL do Stream / Vídeo',
-          lblEditSourceLang: 'Idioma do Áudio (Origem)',
+          lblEditSourceLang: 'Idioma do áudio da sessão',
           btnEditSave: 'Salvar alterações',
           toastSessionUpdated: 'Sessão "{id}" atualizada com sucesso.',
           origLangLabel: 'Língua original:',
@@ -3206,30 +3187,10 @@
         updateKpiMetrics();
       }
 
-      function getMediaKind(url) {
-        if (!url) return null;
-        const u = String(url).toLowerCase().trim();
-        if (!u) return null;
-        if (u.match(/\.(mp4|mkv|webm|mov|avi|m4v|flv)(\?|$)/i)) return 'video';
-        if (u.includes('youtube.com') || u.includes('youtu.be')) {
-          if (u.includes('/live') || u.includes('live=1')) return 'stream';
-          return 'video';
-        }
-        if (u.includes('vimeo.com')) return 'video';
-        if (u.startsWith('rtmp://') || u.startsWith('rtmps://') || u.startsWith('rtsp://') || u.includes('twitch.tv')) return 'stream';
-        if (u.includes('.m3u8') || u.includes('.mpd')) return 'stream';
-        return 'stream';
-      }
-
       function renderMediaBadgeHtml(streamUrl) {
         if (!streamUrl) return '';
-        const kind = getMediaKind(streamUrl);
-        if (!kind) return '';
-        const isVideo = kind === 'video';
-        const label = isVideo ? 'VIDEO' : 'STREAM';
-        const badgeClass = isVideo ? 'badge-video' : 'badge-stream';
         const title = escapeHtml(streamUrl);
-        return `<span class="${badgeClass}" title="${title}">${label}</span>`;
+        return `<span class="badge-stream" title="${title}">STREAMING...</span>`;
       }
 
       function createSessionCard(session, t) {
@@ -3414,29 +3375,27 @@
           titleLabelEl.textContent = expectedPrefix;
         }
 
-        // Badge STREAM / VIDEO
+        // Badge STREAMING...
         const roomIdentity = card.querySelector('.room-identity');
         if (roomIdentity) {
-          const kind = getMediaKind(session.stream_url);
-          const currentBadge = roomIdentity.querySelector('.badge-stream, .badge-video');
-          if (kind) {
-            const isVideo = kind === 'video';
-            const targetClass = isVideo ? 'badge-video' : 'badge-stream';
-            const targetLabel = isVideo ? 'VIDEO' : 'STREAM';
-            const streamTitle = session.stream_url || (isVideo ? 'Video' : 'Stream en vivo activo');
-            if (!currentBadge) {
-              const newBadge = document.createElement('span');
-              newBadge.className = targetClass;
-              newBadge.textContent = targetLabel;
-              newBadge.title = streamTitle;
-              roomIdentity.appendChild(newBadge);
+          const hasStream = Boolean(session.stream_url || session.is_stream);
+          let streamBadge = roomIdentity.querySelector('.badge-stream');
+          const videoBadge = roomIdentity.querySelector('.badge-video');
+          if (videoBadge) videoBadge.remove();
+
+          if (hasStream) {
+            const streamTitle = session.stream_url || 'Stream en vivo activo';
+            if (!streamBadge) {
+              streamBadge = document.createElement('span');
+              streamBadge.className = 'badge-stream';
+              streamBadge.textContent = 'STREAMING...';
+              roomIdentity.appendChild(streamBadge);
             } else {
-              if (currentBadge.className !== targetClass) currentBadge.className = targetClass;
-              if (currentBadge.textContent !== targetLabel) currentBadge.textContent = targetLabel;
-              if (currentBadge.title !== streamTitle) currentBadge.title = streamTitle;
+              if (streamBadge.textContent !== 'STREAMING...') streamBadge.textContent = 'STREAMING...';
             }
-          } else if (currentBadge) {
-            currentBadge.remove();
+            if (streamBadge.title !== streamTitle) streamBadge.title = streamTitle;
+          } else if (streamBadge) {
+            streamBadge.remove();
           }
         }
 

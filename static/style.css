@@ -1503,7 +1503,6 @@ body.theme-light .home-session-item:hover .home-session-arrow {
    Visibilidad de la Barra de Arriba en Modo Home vs Modo Sesión
    En Home: Solo Casa, Punto en Vivo, Sesión ->, Idioma ->, Settings y Site Lang
    ========================================================================== */
-body.is-home #btn-toggle-theme,
 body.is-home #btn-toggle-source,
 body.is-home #btn-toggle-scroll,
 body.is-home #btn-scroll-bottom,
