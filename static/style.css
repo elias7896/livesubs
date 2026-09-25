@@ -415,6 +415,7 @@ body.mode-reader {
   letter-spacing: -0.01em;
   text-align: center;
   width: 100%;
+  white-space: pre-wrap;
 }
 
 .subtitle-source {
@@ -428,6 +429,7 @@ body.mode-reader {
   margin-top: 0.2rem;
   text-align: center;
   width: 100%;
+  white-space: pre-wrap;
 }
 
 /* Ocultar texto original si el usuario lo desactiva */

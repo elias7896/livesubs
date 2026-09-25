@@ -48,7 +48,7 @@ import onnxruntime as ort
 import redis
 import sounddevice as sd
 from dotenv import load_dotenv
-from groq import Groq, NotFoundError, RateLimitError
+from groq import Groq, NotFoundError, RateLimitError, APIConnectionError, APITimeoutError
 
 # Cargar variables de entorno
 load_dotenv()
@@ -111,8 +111,8 @@ GLOSSARY_TERMS_DEFAULT = os.getenv("GLOSSARY_TERMS", "")
 # Parámetros de VAD
 VAD_WINDOW_SIZE = 512  # 32ms a 16kHz
 VAD_THRESHOLD = float(os.getenv("VAD_THRESHOLD", "0.5"))
-PAUSE_SILENCE_SECONDS = float(os.getenv("PAUSE_SILENCE_SECONDS", "0.6"))
-MIN_SPEECH_DURATION = float(os.getenv("MIN_SPEECH_DURATION", "0.8"))
+PAUSE_SILENCE_SECONDS = float(os.getenv("PAUSE_SILENCE_SECONDS", "0.45"))
+MIN_SPEECH_DURATION = float(os.getenv("MIN_SPEECH_DURATION", "0.40"))
 
 # Mapeo de Idiomas
 LANG_NAMES = {
@@ -129,7 +129,7 @@ class GroqKeyRotator:
         self.keys = [k for k in api_keys if k and k != "gsk_tu_api_key_aqui"]
         if not self.keys:
             raise ValueError("No se encontraron API Keys válidas de Groq.")
-        self.clients = {k: Groq(api_key=k) for k in self.keys}
+        self.clients = {k: Groq(api_key=k, timeout=7.0, max_retries=0) for k in self.keys}
         self.cooldowns = {k: 0.0 for k in self.keys}
         import random
         self.current_idx = random.randint(0, len(self.keys) - 1) if start_idx is None else (start_idx % len(self.keys))
@@ -295,6 +295,53 @@ def deduplicate_repetitions(text: str) -> str:
     return " ".join(words).strip()
 
 
+def format_dialogue_turns(text: str) -> str:
+    """
+    Formatea turnos de diálogo entre dos oradores en una misma frase según estándares broadcast (YouTube / TV).
+    Convierte diálogos corridos como:
+      '¿Veniste manejando? Ahora me vine manejando, sí.'
+    en:
+      '- ¿Veniste manejando?\n- Ahora me vine manejando, sí.'
+    """
+    text = (text or "").strip()
+    if not text:
+        return ""
+
+    # Si ya contiene saltos de línea con guiones de diálogo, preservar
+    if "\n-" in text or "\n - " in text:
+        return text
+
+    # Si ya tiene guiones de diálogo en una sola línea (ej. '- Hola - Muy bien')
+    if re.search(r'^\s*-\s*.+\s+-\s+[A-ZÁÉÍÓÚ¿¡]', text):
+        return re.sub(r'(\s+)-\s+([A-ZÁÉÍÓÚ¿¡])', r'\n- \2', text)
+
+    # Si hay un guion en medio tras signo de puntuación: '¿Cómo estás? - Bien.'
+    if re.search(r'[.?!]\s+-\s+[A-ZÁÉÍÓÚ¿¡]', text):
+        formatted = re.sub(r'([.?!])\s+-\s+([A-ZÁÉÍÓÚ¿¡])', r'\1\n- \2', text)
+        if not formatted.startswith("-"):
+            formatted = "- " + formatted
+        return formatted
+
+    # Detección de pregunta cerrada/abierta seguida de respuesta (cambio de orador)
+    # Ejemplos:
+    # '¿Te apuntaste en Córdoba? ¿Veniste manejando? Ahora me vine manejando, sí.'
+    # '¿Y ahora practicas algún deporte? No, voy al gimnasio cuando puedo...'
+    # '¿me podés conseguir el teléfono? Bueno, llame a uno de los chicos.'
+    q_match = re.search(r'(\?)\s+([A-ZÁÉÍÓÚ¿¡][^?]+)$', text)
+    if q_match:
+        idx = q_match.start(2)
+        q_part = text[:idx].strip()
+        ans_part = text[idx:].strip()
+
+        # Palabras de cambio de turno o respuestas
+        turn_indicators = r'^(Sí|No|Bueno|Claro|Dale|Exacto|Obvio|Mirá|Y bueno|Por supuesto|Totalmente|Pará|Che|Hola|Gracias|Yes|Yeah|Sure|Well|Sim|Não)\b'
+        words = ans_part.split()
+        if len(words) >= 2 or re.match(turn_indicators, ans_part, re.I):
+            return f"- {q_part}\n- {ans_part}"
+
+    return text
+
+
 class ValkeyPublisher:
     """Publicador en Valkey con aislamiento multisesión por session_id."""
 
@@ -455,8 +502,8 @@ class SubtitlePipeline:
             self._rot_index = (self._rot_index + rot_added) % pool_size
 
         asr_prompt = ", ".join(glossary_slice)
-
-        dynamic_prompt = asr_prompt
+        dialogue_hint = "- ¿Pregunta? - Respuesta."
+        dynamic_prompt = f"{dialogue_hint} {asr_prompt}" if asr_prompt else dialogue_hint
         if len(dynamic_prompt) > 850:
             dynamic_prompt = dynamic_prompt[:850]
 
@@ -473,7 +520,7 @@ class SubtitlePipeline:
                 if dynamic_prompt:
                     kwargs["prompt"] = dynamic_prompt
 
-                transcription = client.audio.transcriptions.create(**kwargs)
+                transcription = client.audio.transcriptions.create(**kwargs, timeout=5.5)
                 text = (getattr(transcription, "text", "") or "").strip()
                 lang_raw = (getattr(transcription, "language", "") or fallback_lang).lower().strip()
                 if lang_raw.startswith("es") or "spanish" in lang_raw:
@@ -483,9 +530,13 @@ class SubtitlePipeline:
                 else:
                     detected_lang = "en"
                 return text, detected_lang
-            except RateLimitError as e:
+            except RateLimitError:
                 logger.warning(f"RateLimitError (429) en ASR con clave {active_key[:8]}... Conmutando...")
                 self.rotator.mark_rate_limited(active_key, cooldown_s=2.5)
+                continue
+            except (APITimeoutError, APIConnectionError) as e:
+                logger.warning(f"Timeout/Red en ASR con clave {active_key[:8]}... ({type(e).__name__}). Conmutando...")
+                self.rotator.mark_rate_limited(active_key, cooldown_s=3.0)
                 continue
             except Exception as e:
                 logger.error(f"Error en Whisper ASR ({active_key[:8]}...): {e}")
@@ -499,7 +550,8 @@ class SubtitlePipeline:
         """
         all_langs = ["en", "es", "pt"]
         src = source_lang if source_lang in all_langs else "en"
-        translations = {src: text_source}
+        formatted_source = format_dialogue_turns(text_source)
+        translations = {src: formatted_source}
         targets_needed = [l for l in all_langs if l != src]
 
         if not targets_needed or not text_source.strip():
@@ -520,14 +572,15 @@ class SubtitlePipeline:
             "2. Translate faithfully and accurately to what was said without inventing extra facts, hallucinations, or adding commentary.\n"
             "3. Preserve technical, cloud, AI, and industry terms in standard industry terminology.\n"
             "4. Preserve proper names of people, companies, tech brands, and databases (e.g., Dijkstra, Turing, AWS, SQLite, Postgres, OpenAI) intact without translating or altering them.\n"
-            f"5. Output MUST be valid JSON with keys: {{{keys_example}}}. Output ONLY valid JSON without markdown fences or explanations."
+            "5. If the source text contains dialogue with dashes or speaker turns (e.g. '- Speaker 1\\n- Speaker 2'), preserve the dialogue format and dashes in the translated lines.\n"
+            f"6. Output MUST be valid JSON with keys: {{{keys_example}}}. Output ONLY valid JSON without markdown fences or explanations."
         )
 
-        user_content = text_source
+        user_content = formatted_source
         if self.last_transcription:
             clean_prev = self.last_transcription.strip()
             if clean_prev and clean_prev.lower() != text_source.lower():
-                user_content = f"[Previous context: {clean_prev[-120:]}]\n[Current speech to translate: {text_source}]"
+                user_content = f"[Previous context: {clean_prev[-120:]}]\n[Current speech to translate: {formatted_source}]"
 
         models_to_try = [self.chat_model]
         if not self._fallback_active and GROQ_FALLBACK_CHAT_MODEL != self.chat_model:
@@ -545,14 +598,15 @@ class SubtitlePipeline:
                         ],
                         response_format={"type": "json_object"},
                         temperature=0.0,
-                        max_tokens=1000
+                        max_tokens=1000,
+                        timeout=4.5
                     )
                     self.chat_model = model
                     content = response.choices[0].message.content.strip()
                     parsed = json.loads(content)
                     for k in targets_needed:
                         if k in parsed and isinstance(parsed[k], str):
-                            translations[k] = parsed[k].strip()
+                            translations[k] = format_dialogue_turns(parsed[k].strip())
                     return translations
                 except NotFoundError:
                     logger.warning(f"Modelo '{model}' no accesible. Conmutando a '{GROQ_FALLBACK_CHAT_MODEL}'.")
@@ -562,6 +616,10 @@ class SubtitlePipeline:
                     logger.warning(f"RateLimitError (429) en Chat con clave {active_key[:8]}... Conmutando...")
                     self.rotator.mark_rate_limited(active_key, cooldown_s=2.5)
                     continue
+                except (APITimeoutError, APIConnectionError) as e:
+                    logger.warning(f"Timeout/Red en Chat con clave {active_key[:8]}... ({type(e).__name__}). Conmutando...")
+                    self.rotator.mark_rate_limited(active_key, cooldown_s=3.0)
+                    continue
                 except Exception as e:
                     logger.warning(f"Aviso en traducción multi ({model}): {e}")
                     break
@@ -569,7 +627,7 @@ class SubtitlePipeline:
         # Fallback si falló llamada a chat
         for k in targets_needed:
             if k not in translations:
-                translations[k] = text_source
+                translations[k] = formatted_source
         return translations
 
     def translate(self, text_source: str) -> str:
@@ -734,9 +792,9 @@ class AudioWorker:
                 queue_lat_ms = (start_infer_time - emit_time) * 1000
                 chunk_duration_s = len(audio_chunk) / SAMPLE_RATE
 
-                # Protección anti-congestión: si el chunk esperó > 8s en cola por rate-limit o red,
-                # descartarlo para volver inmediatamente al vivo y evitar latencias de 100.000ms
-                if queue_lat_ms > 8000:
+                # Protección anti-congestión: si el chunk esperó > 4.5s en cola por lag o red,
+                # descartarlo para volver inmediatamente al vivo y evitar latencias acumuladas
+                if queue_lat_ms > 4500:
                     logger.warning(f"Purgando chunk atrasado ({queue_lat_ms/1000:.1f}s en cola) para recuperar el vivo.")
                     continue
 
@@ -749,6 +807,7 @@ class AudioWorker:
                 asr_lat_ms = (time.time() - t_asr_start) * 1000
 
                 clean_source = deduplicate_repetitions(text_source.strip())
+                clean_source = format_dialogue_turns(clean_source)
                 hallucinations = {"you", "thank you.", "thank you", "thanks for watching.", "thanks for watching", ".", "..."}
                 if not clean_source or len(clean_source) < 2 or clean_source.lower() in hallucinations:
                     continue
