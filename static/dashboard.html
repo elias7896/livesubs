@@ -247,7 +247,7 @@
     }
 
     .section-title {
-      font-size: 0.95rem;
+      font-size: 1.15rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -278,8 +278,21 @@
       cursor: pointer;
       display: inline-flex;
       align-items: center;
+      justify-content: space-between;
       gap: 0.5rem;
+      width: 195px;
+      min-width: 195px;
+      max-width: 195px;
+      box-sizing: border-box;
       transition: var(--transition-smooth);
+    }
+
+    #lbl-slicer-button-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+      text-align: left;
     }
 
     .btn-slicer-toggle:hover {
@@ -289,6 +302,7 @@
 
     .dropdown-chevron {
       transition: transform 0.15s ease;
+      flex-shrink: 0;
     }
 
     .btn-slicer-toggle[aria-expanded="true"] .dropdown-chevron {
@@ -299,8 +313,10 @@
       position: absolute;
       top: calc(100% + 4px);
       left: 0;
-      min-width: 250px;
-      max-width: 340px;
+      width: 260px;
+      min-width: 260px;
+      max-width: 260px;
+      box-sizing: border-box;
       background: #000000;
       border: 1px solid var(--border-color);
       border-radius: 4px;
@@ -354,6 +370,17 @@
       cursor: pointer;
       user-select: none;
       transition: background 0.12s ease, color 0.12s ease;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .slicer-chk-item span {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+      flex: 1;
     }
 
     .slicer-chk-item:hover {
@@ -482,9 +509,9 @@
 
     .analytics-row-top {
       display: grid;
-      grid-template-columns: 1fr clamp(380px, 32vw, 480px);
+      grid-template-columns: 1fr 440px;
       gap: 1rem;
-      align-items: stretch;
+      align-items: start;
       width: 100%;
     }
 
@@ -500,6 +527,11 @@
       .analytics-row-top {
         grid-template-columns: 1fr;
       }
+      .chart-card-table {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+      }
       .analytics-row-bottom {
         grid-template-columns: 1fr 1fr;
       }
@@ -514,25 +546,27 @@
       }
     }
 
-    /* Tabla de Métricas (Power BI Style - Sin Título, Altura Completa) */
+    /* Tabla de Métricas (Power BI Style - Sin Título, Ancho Fijo, Largo Dinámico con Límite de Telemetría) */
     .chart-card-table {
       background-color: transparent;
       display: flex;
       flex-direction: column;
-      width: 100%;
-      min-width: 0;
-      height: 100%;
+      width: 440px;
+      min-width: 440px;
+      max-width: 440px;
+      box-sizing: border-box;
     }
 
     .table-ms-wrap {
       background-color: var(--bg-dark);
       border-radius: 4px;
-      height: 100%;
-      min-height: 236px;
+      max-height: 236px;
       overflow-y: auto;
       overflow-x: hidden;
       border: 1px solid var(--border-color);
-      flex: 1;
+      width: 100%;
+      box-sizing: border-box;
+      transition: max-height 0.15s ease;
     }
 
     .table-ms-wrap::-webkit-scrollbar {
@@ -653,7 +687,7 @@
 
     .table-ms-empty {
       text-align: center !important;
-      padding: 3rem 0.5rem !important;
+      padding: 1.5rem 0.5rem !important;
       color: var(--text-muted) !important;
       font-size: 0.78rem !important;
       font-style: italic;
@@ -2355,8 +2389,8 @@
                   borderWidth: 2,
                   fill: false,
                   tension: 0.35,
-                  pointRadius: 0,
-                  pointHoverRadius: 4,
+                  pointRadius: 2.5,
+                  pointHoverRadius: 5,
                   pointBackgroundColor: '#00f0ff',
                   pointBorderColor: '#00f0ff',
                   pointBorderWidth: 1
@@ -2369,8 +2403,8 @@
                   borderWidth: 1.8,
                   fill: false,
                   tension: 0.35,
-                  pointRadius: 0,
-                  pointHoverRadius: 4,
+                  pointRadius: 2.5,
+                  pointHoverRadius: 5,
                   pointBackgroundColor: '#ff9500',
                   pointBorderColor: '#ff9500',
                   pointBorderWidth: 1
@@ -2383,8 +2417,8 @@
                   borderWidth: 1.8,
                   fill: false,
                   tension: 0.35,
-                  pointRadius: 0,
-                  pointHoverRadius: 4,
+                  pointRadius: 2.5,
+                  pointHoverRadius: 5,
                   pointBackgroundColor: '#f43f5e',
                   pointBorderColor: '#f43f5e',
                   pointBorderWidth: 1
@@ -2664,11 +2698,23 @@
         }
       }
 
+      function syncTableMaxHeight() {
+        const mainCard = document.querySelector('.analytics-row-top .chart-card-main');
+        const tableWrap = document.querySelector('.table-ms-wrap');
+        if (mainCard && tableWrap) {
+          const h = mainCard.offsetHeight;
+          if (h > 100) {
+            tableWrap.style.maxHeight = `${h}px`;
+          }
+        }
+      }
+
       function updateLatencyMetricsTable(breakdown) {
         if (!elements.tableMsTbody) return;
         const t = I18N[currentSiteLang] || I18N.es;
         if (!breakdown || breakdown.length === 0) {
           elements.tableMsTbody.innerHTML = `<tr><td colspan="4" class="table-ms-empty">${t.tableMsEmpty || 'Sin sesiones activas'}</td></tr>`;
+          syncTableMaxHeight();
           return;
         }
 
@@ -2686,6 +2732,7 @@
           `;
         });
         elements.tableMsTbody.innerHTML = html;
+        syncTableMaxHeight();
       }
 
       function updateAnalyticsCharts(sessions) {
@@ -2930,9 +2977,11 @@
           targetText = found ? (found.title || found.session_id) : firstId;
         } else {
           targetText = (t.slicerButtonCount ? t.slicerButtonCount.replace('{count}', selected) : `${selected} sel.`);
-        }
         if (elements.lblSlicerButtonText.textContent !== targetText) {
           elements.lblSlicerButtonText.textContent = targetText;
+        }
+        if (elements.btnSlicerToggle) {
+          elements.btnSlicerToggle.title = targetText;
         }
       }
 
@@ -4034,6 +4083,8 @@
       initAnalyticsCharts();
       setSiteLanguage(currentSiteLang);
       checkAuth();
+      syncTableMaxHeight();
+      window.addEventListener('resize', syncTableMaxHeight);
 
     })();
   </script>
