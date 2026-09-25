@@ -226,17 +226,23 @@ Simulate multiple parallel stages (e.g. 5 concurrent tracks) to stress-test Valk
 
 ## Production Architecture & High-Traffic Scaling
 
+### Production Audio Ingestion (Broadcast Standard)
+
+In enterprise and production broadcast environments (conferences, live events, studio broadcasts), live audio/video is **never scraped from consumer web players**. Instead, audio is ingested directly through dedicated production protocols:
+- **Direct Encoder Push**: Broadcast software (OBS Studio, vMix, Tricaster) or hardware encoders push audio directly to the LiveSubs gateway via **WebSockets (`/ws/{session_id}`)**, **RTMP**, or **SRT**. This provides sub-second latency, eliminates third-party platform dependencies, and operates completely free from anti-bot or CAPTCHA challenges.
+- **Microphone / Host Capture**: Dedicated on-premise or backstage ingestion workers capturing local audio interfaces and streaming directly to the central gateway broker.
+
 ### Traffic & Resource Footprint
 
 - **Decoupled 1-to-N Pipeline**: Ingestion inference (ASR + LLM) occurs exactly once per audio chunk (~4s) regardless of viewer count. 1 viewer or 50,000 viewers incur the identical AI inference overhead.
 - **Bandwidth Profile**: Subtitle JSON payloads average ~250 bytes per 4 seconds (~60 B/s per client, or ~0.5 kbps). 1,000 concurrent viewers consume less than 0.6 Mbps of outbound network traffic.
 
-### Deployment Recommendations
+### Recommended Infrastructure
 
-| Target Concurrency | Recommended Infrastructure | Configuration |
+| Target Concurrency | Recommended Infrastructure | Architecture & Components |
 | :--- | :--- | :--- |
-| **Up to 5,000 – 10,000 Viewers** | **Single Linux VM** (4 vCPUs, 8 GB RAM, e.g. Azure D4as_v5, AWS c6i.xlarge, or Hetzner CX31) | Run Valkey via Docker, tune OS open file descriptors (`ulimit -n 65535`), and run Uvicorn directly with standard WebSocket loop. Viable and cost-effective (< $40/mo). |
-| **10,000 to 100,000+ Viewers** | **Distributed Container Cluster** (Kubernetes AKS/EKS, AWS ECS, or Docker Swarm) | **Ingestion**: 1 worker per active stream channel.<br>**Broker**: Managed Valkey/Redis instance (e.g., Azure Cache for Redis, AWS ElastiCache).<br>**WebSockets**: Horizontally scale stateless `backend.server:app` replicas behind a Layer 7 Load Balancer (Nginx / AWS ALB / Traefik) handling TLS termination. |
+| **Standard Broadcast (Up to 5,000 Viewers)** | **Containerized Gateway (Docker Compose)** | • **Ingestion**: 1 worker process per active stage/room.<br>• **Broker**: Valkey 7.2 container on dedicated persistent volume.<br>• **Gateway**: FastAPI Uvicorn ASGI server with standard async WebSockets.<br>• **Reverse Proxy**: Nginx or Cloudflare with SSL/TLS termination and WebSocket upgrade support. |
+| **Enterprise / Multi-Track (5,000 to 100,000+ Viewers)** | **Distributed Container Cluster (Kubernetes / ECS)** | • **Ingestion Layer**: Dedicated worker pods per track/room, horizontally isolated.<br>• **Message Broker**: Managed high-availability Valkey/Redis cluster (e.g. AWS ElastiCache, Azure Cache for Redis).<br>• **Distribution Layer**: Horizontally autoscaled stateless `backend.server:app` gateway pods behind an L7 Load Balancer (AWS ALB / Nginx Ingress). |
 
 ---
 
