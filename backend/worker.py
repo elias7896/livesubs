@@ -77,8 +77,8 @@ VALKEY_PORT = int(os.getenv("VALKEY_PORT", "6379"))
 VALKEY_CHANNEL = os.getenv("VALKEY_CHANNEL", "subtitles:live")
 VALKEY_HISTORY_KEY = os.getenv("VALKEY_HISTORY_KEY", "subtitles:history")
 
-CHUNK_SECONDS = float(os.getenv("CHUNK_SECONDS", "8.0"))
-MAX_CHUNK_SECONDS = float(os.getenv("MAX_CHUNK_SECONDS", "12.0"))
+CHUNK_SECONDS = float(os.getenv("CHUNK_SECONDS", "4.0"))
+MAX_CHUNK_SECONDS = float(os.getenv("MAX_CHUNK_SECONDS", "5.5"))
 SAMPLE_RATE = int(os.getenv("SAMPLE_RATE", "16000"))
 _candidate_vad = [
     os.getenv("VAD_MODEL_PATH", ""),
@@ -111,8 +111,8 @@ GLOSSARY_TERMS_DEFAULT = os.getenv("GLOSSARY_TERMS", "")
 # Parámetros de VAD
 VAD_WINDOW_SIZE = 512  # 32ms a 16kHz
 VAD_THRESHOLD = float(os.getenv("VAD_THRESHOLD", "0.5"))
-PAUSE_SILENCE_SECONDS = float(os.getenv("PAUSE_SILENCE_SECONDS", "0.65"))
-MIN_SPEECH_DURATION = float(os.getenv("MIN_SPEECH_DURATION", "0.50"))
+PAUSE_SILENCE_SECONDS = float(os.getenv("PAUSE_SILENCE_SECONDS", "0.48"))
+MIN_SPEECH_DURATION = float(os.getenv("MIN_SPEECH_DURATION", "0.40"))
 
 # Mapeo de Idiomas
 LANG_NAMES = {
@@ -722,13 +722,14 @@ class AudioWorker:
         self.in_speech = False
         self.consecutive_silent_frames = 0
 
-        self.target_frames = int(CHUNK_SECONDS * frames_per_sec)  # ~8.0s (250 frames)
-        self.max_elastic_frames = int(MAX_CHUNK_SECONDS * frames_per_sec)  # ~12.0s (375 frames)
+        self.target_frames = int(CHUNK_SECONDS * frames_per_sec)  # ~4.0s (125 frames)
+        self.max_elastic_frames = int(MAX_CHUNK_SECONDS * frames_per_sec)  # ~5.5s (172 frames)
         self.max_frames = self.target_frames
         self.min_speech_frames = int(MIN_SPEECH_DURATION * frames_per_sec)
-        self.pause_silence_frames = int(PAUSE_SILENCE_SECONDS * frames_per_sec)  # ~650ms pausa natural de fin de frase
-        self.clause_pause_frames = max(8, int(0.45 * frames_per_sec))  # ~450ms pausa de cláusula tras 8s de habla continua
-        self.postroll_frames = max(4, int(0.15 * frames_per_sec))  # ~150ms post-roll para final suave de palabra
+        self.pause_silence_frames = int(PAUSE_SILENCE_SECONDS * frames_per_sec)  # ~480ms pausa natural de fin de frase
+        self.micro_pause_frames = max(6, int(0.24 * frames_per_sec))  # ~240ms micro-pausa acústica tras alcanzar 4s
+        self.clause_pause_frames = self.micro_pause_frames
+        self.postroll_frames = max(4, int(0.12 * frames_per_sec))  # ~120ms post-roll para final suave de palabra
         self.overlap_frames = max(6, int(0.20 * frames_per_sec))  # ~200ms solapamiento en cortes forzados elásticos
 
         self.request_timestamps = deque()
@@ -957,7 +958,7 @@ class AudioWorker:
             self.accumulated_frames.append(frame)
             self.consecutive_silent_frames = 0
 
-            # Límite elástico absoluto de seguridad (12.0s): solo cortar si el orador habla sin parar
+            # Límite elástico de seguridad (5.5s): cortar si el orador habla sin interrupción
             if len(self.accumulated_frames) >= self.max_elastic_frames:
                 self._emit_current_chunk(is_forced_cut=True)
         else:
@@ -966,11 +967,11 @@ class AudioWorker:
                 self.accumulated_frames.append(frame)
 
                 curr_len = len(self.accumulated_frames)
-                # 1. Fin natural de oración: el orador terminó de hablar o hizo una pausa real (ej. 0.65s)
+                # 1. Fin natural de frase u oración: el orador hizo una pausa real (ej. 0.48s)
                 if self.consecutive_silent_frames >= self.pause_silence_frames:
                     self._emit_current_chunk(is_forced_cut=False)
-                # 2. Cláusula sintáctica amplia: solo tras 8s de habla continua y con una pausa clara (>= 0.45s)
-                elif curr_len >= self.target_frames and self.consecutive_silent_frames >= self.clause_pause_frames:
+                # 2. Micro-pausa de respiro o coma (>= 0.24s) tras alcanzar ventana objetivo (>= 4.0s)
+                elif curr_len >= self.target_frames and self.consecutive_silent_frames >= self.micro_pause_frames:
                     self._emit_current_chunk(is_forced_cut=False)
                 # 3. Límite elástico absoluto de seguridad en silencio
                 elif curr_len >= self.max_elastic_frames:
