@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# Script para Detener y Limpiar Procesos
-# ==============================================================================
+set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$SCRIPT_DIR/requirements.txt" ]; then
@@ -13,13 +11,13 @@ else
 fi
 cd "$DIR"
 
-echo "Deteniendo servicios del sistema de subtitulado..."
+echo "Stopping LiveSubs services..."
 
-# 1. Detener Tunel de Cloudflare
+# 1. Stop Cloudflare Tunnel
 if [ -f ".tunnel.pid" ]; then
     PID=$(cat .tunnel.pid)
     if kill -0 "$PID" 2>/dev/null; then
-        echo -n "   Deteniendo cloudflared (PID: $PID)... "
+        echo -n "   Stopping cloudflared (PID: $PID)... "
         kill "$PID" 2>/dev/null || true
         echo "[OK]"
     fi
@@ -27,11 +25,11 @@ if [ -f ".tunnel.pid" ]; then
 fi
 pkill -f "cloudflared tunnel" 2>/dev/null || true
 
-# 2. Detener Servidor FastAPI
+# 2. Stop FastAPI Gateway
 if [ -f ".server.pid" ]; then
     PID=$(cat .server.pid)
     if kill -0 "$PID" 2>/dev/null; then
-        echo -n "   Deteniendo FastAPI/Uvicorn (PID: $PID)... "
+        echo -n "   Stopping FastAPI / Uvicorn (PID: $PID)... "
         kill "$PID" 2>/dev/null || true
         echo "[OK]"
     fi
@@ -39,7 +37,7 @@ if [ -f ".server.pid" ]; then
 fi
 pkill -f "uvicorn.*server:app" 2>/dev/null || true
 
-# 3. Detener Worker en caso de que haya quedado corriendo en segundo plano
+# 3. Stop background workers
 pkill -f "worker.py" 2>/dev/null || true
 
-echo "Todos los procesos han sido detenidos limpiamente."
+echo "All services stopped."

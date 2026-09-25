@@ -1,320 +1,224 @@
-# Live Subtitles & Real-time Translation (EN &rarr; ES)
+# LiveSubs
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white" alt="Python Versions">
-  <img src="https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/FastAPI-0.110+-009688.svg?logo=fastapi&logoColor=white" alt="FastAPI">
-  <img src="https://img.shields.io/badge/Valkey-7.2-red.svg" alt="Valkey">
-  <img src="https://img.shields.io/badge/Inference-Groq%20Cloud-F55036.svg" alt="Groq Cloud">
-  <img src="https://img.shields.io/badge/Tunnels-Cloudflare-F38020.svg?logo=cloudflare&logoColor=white" alt="Cloudflare">
-</p>
+High-performance real-time speech recognition, translation, and live subtitling engine designed for live streams (OBS Studio, Twitch, YouTube) and accessible web/mobile clients.
 
-Sistema Open Source de subtitulado y traducción de audio en vivo de alto rendimiento (Ingles &rarr; Español) para transmisiones 1 a N. Diseñado específicamente para **creadores de contenido y streamers (OBS Studio / Twitch / YouTube)** y para **lectura continua accesible en navegadores web y móviles**.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Valkey](https://img.shields.io/badge/Valkey-7.2-red.svg)](https://valkey.io)
+[![Groq Cloud](https://img.shields.io/badge/Inference-Groq%20Cloud-F55036.svg)](https://groq.com)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)](Dockerfile)
 
 ---
 
-## Demostracion Visual de Modos
-
-````carousel
-<!-- slide -->
-### Modo Overlay para OBS Studio (`/?mode=overlay`)
-Fondo 100% transparente, tipografía monocromática / monospace de contorno nítido de alto contraste legible sobre cualquier videojuego o cámara, mostrando únicamente las últimas frases con desvanecimiento automático tras 10 segundos de silencio.
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                                                             │
-│                [ Camara / Gameplay del Stream ]             │
-│                                                             │
-│                                                             │
-│       ┌───────────────────────────────────────────────┐     │
-│       │     "Y asi, mis compatriotas estadounidenses" │     │
-│       │     And so, my fellow Americans               │     │
-│       └───────────────────────────────────────────────┘     │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
-
-<!-- slide -->
-### Modo Lector Web (`/`)
-Interfaz oscura minimalista inspirada en OpenAI con historial cronológico, auto-scroll suave hacia nuevos mensajes, toggle para ocultar/mostrar texto original en inglés y controles de tamaño de texto.
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ En vivo     [Subtitulos en Vivo]   [Original: ON] [Auto-scroll: ON] │
-├─────────────────────────────────────────────────────────────┤
-│ 19:45:10                                              840ms │
-│ No preguntes que puede hacer tu pais por ti...              │
-│ Ask not what your country can do for you...                 │
-├─────────────────────────────────────────────────────────────┤
-│ 19:45:14                                              790ms │
-│ Pregunta que puedes hacer tu por tu pais.                   │
-│ Ask what you can do for your country.                       │
-└─────────────────────────────────────────────────────────────┘
-```
-````
-
----
-
-## Arquitectura del Sistema
+## Architecture
 
 ```mermaid
 flowchart TD
-    A["Microfono / Audio (16 kHz Mono)"] --> B["Ingestion Worker (worker.py)"]
-    
-    subgraph Worker ["Worker Pipeline"]
+    A["Audio Input (Microphone / Stream URL)"] --> B["Ingestion Worker (backend/worker.py)"]
+
+    subgraph Pipeline ["Acoustic & Inference Pipeline"]
         B --> C["Silero VAD v5 (ONNX Runtime)"]
-        C -- "Filtra Silencio" --> D["Voice Buffer & Chunking (~3.5s)"]
-        D --> E["Groq Whisper ASR (whisper-large-v3)"]
-        E --> F["Groq Llama Translation (llama-3.1-8b-instant)"]
+        C -- "Voice Detected" --> D["Acoustic Windowing (350ms pre-roll, 120ms post-roll, 200ms carry-over)"]
+        D --> E["Groq Whisper ASR (whisper-large-v3-turbo)"]
+        E --> F{"Source == Target?"}
+        F -- "No" --> G["Groq LLM Translation (openai/gpt-oss-120b)"]
+        F -- "Yes" --> H["Zero-Token Bypass"]
     end
 
-    F --> G[("Valkey Broker & Cache\nlocalhost:6379")]
-    G -- "Pub/Sub 'subtitles:live'" --> H["FastAPI Gateway (server.py)"]
-    G -- "Cache 'subtitles:history'" --> H
+    G --> I[("Valkey Pub/Sub & History\nlocalhost:6379")]
+    H --> I
 
-    subgraph Gateway ["Distribucion 1 a N"]
-        H --> I["WebSockets (/ws)"]
-        H --> J["Static Web Server (/)"]
+    I --> J["FastAPI Gateway (backend/server.py)"]
+    J --> K[("SQLite WAL Persistence\nsubtitles.db")]
+
+    subgraph Distribution ["1-to-N Real-time Distribution"]
+        J --> L["WebSocket Gateway (/ws/{session_id})"]
+        J --> M["SSE Telemetry Stream (/api/telemetry/stream)"]
     end
 
-    I --> K["Red Local (http://localhost:8000)"]
-    I --> L["Cloudflare Tunnel (HTTPS/WSS Publico)"]
-
-    K --> M["OBS Studio (Browser Source)"]
-    L --> N["Espectadores Web / Moviles"]
+    L --> N["OBS Studio Overlay (/?mode=overlay)"]
+    L --> O["Web & Mobile Reader (/)"]
+    M --> P["Control Room Dashboard (/dashboard)"]
 ```
 
 ---
 
-## Quickstart en 3 Pasos
+## Quickstart
 
-### 1. Clonar y Configurar Credenciales
+### Prerequisites
+
+- Python 3.10+
+- Valkey or Redis (`docker run -d --name valkey -p 6379:6379 valkey/valkey:7.2-alpine`)
+- FFmpeg (for livestream and media ingestion)
+- A free [Groq Cloud API Key](https://console.groq.com/keys)
+
+### 1. Installation
+
 ```bash
-git clone https://github.com/tu-usuario/live-subtitles-translator.git
-cd live-subtitles-translator
+git clone https://github.com/elias7896/livesubs.git
+cd livesubs
 
-# Copiar plantilla y configurar tu GROQ_API_KEY gratuita
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
 cp .env.example .env
-nano .env  # o abre con tu editor preferido
+# Edit .env and set your GROQ_API_KEY
 ```
-*(Obtén tu API Key gratuita en [Groq Console](https://console.groq.com/keys)).*
 
-### 2. Iniciar Infraestructura y Gateway
-Tienes dos alternativas para levantar el backend:
+### 2. Start Services
 
-#### Opción A: Con Docker Compose (Recomendado)
+#### Automated (Server + Valkey + Cloudflare Tunnel)
+```bash
+./scripts/start.sh
+```
+
+#### Manual / Development
+```bash
+# Start Valkey in Docker
+docker run -d --name valkey -p 6379:6379 valkey/valkey:7.2-alpine
+
+# Start FastAPI Gateway
+python backend/server.py
+```
+The server will bind to `http://localhost:8000`.
+
+### 3. Start Audio Ingestion Worker
+
+In a separate terminal:
+
+```bash
+# Microphone capture (English -> Spanish):
+./venv/bin/python backend/worker.py --source-lang en --target-lang es
+
+# Native transcription without translation (Spanish -> Spanish, 0 LLM tokens):
+./venv/bin/python backend/worker.py --source-lang es --target-lang es
+
+# Live stream capture (YouTube, Twitch, Kick, HLS/m3u8):
+./venv/bin/python backend/worker.py --stream-url "https://www.youtube.com/watch?v=..." --source-lang es --target-lang en
+
+# Pre-recorded audio file:
+./venv/bin/python backend/worker.py --file /path/to/audio.wav --source-lang en --target-lang es
+```
+
+To stop all background services started by `start.sh`:
+```bash
+./scripts/stop.sh
+```
+
+---
+
+## Client Interfaces
+
+| Interface | URL | Description |
+| :--- | :--- | :--- |
+| **OBS Overlay** | `http://localhost:8000/?mode=overlay` | Transparent, high-contrast monospace overlay designed for OBS Browser Sources. 1-2 line broadcast display with automatic 10-second fadeout on silence. |
+| **Web Reader** | `http://localhost:8000/` | Minimalist dark reader with smooth auto-scroll, bilingual toggle, font scaling, and session selector. |
+| **Control Room** | `http://localhost:8000/dashboard` | Real-time monitoring dashboard with SSE telemetry, per-session latency breakdown (ASR, Translation, Total), silence alerts (>15s), and 1-click SRT/VTT exports. |
+
+### OBS Studio Setup
+
+1. Add a **Browser Source** in OBS Studio.
+2. Set URL to `http://localhost:8000/?mode=overlay` (or append `&session=<room>&pair=es-en`).
+3. Set Canvas Resolution (e.g. `1920x1080`).
+4. Enable **Shutdown source when not visible** and **Refresh browser when scene becomes active**.
+
+---
+
+## Core Capabilities
+
+### 1. Multilingual Translation Matrix
+
+| Pair | Processing Mode | Average Latency | Token Overhead |
+| :--- | :--- | :--- | :--- |
+| **EN -> ES** | Whisper ASR + LLM MT | ~1.0s – 1.6s | ASR + LLM tokens |
+| **ES -> ES** | Native Transcription (Bypass) | ~350ms – 500ms | 0 LLM tokens |
+| **ES -> EN** | Whisper ASR + LLM MT | ~1.0s – 1.6s | ASR + LLM tokens |
+| **EN -> PT** | Whisper ASR + LLM MT | ~1.0s – 1.6s | ASR + LLM tokens |
+| **ES -> PT** | Whisper ASR + LLM MT | ~1.0s – 1.6s | ASR + LLM tokens |
+
+When source and target languages match, the LLM stage is completely bypassed, delivering raw ASR text immediately.
+
+### 2. Acoustic Windowing & Truncation Protection
+
+- **350ms Acoustic Pre-roll**: Captures word-initial plosives and fricatives before VAD activation.
+- **120ms Post-roll**: Preserves trailing syllables and word endings during silence decay.
+- **200ms Overlap Carry-over**: On forced chunk boundaries, the last 200ms are carried into the subsequent window to avoid splitting cross-boundary words.
+- **Dynamic Cadence**: Chunks target 4.0s with an elastic maximum ceiling of 5.5s, maintaining a steady 3.5s–4.5s subtitle update cadence.
+
+### 3. Domain Biasing (Technical Glossary)
+
+A two-stage biasing mechanism guarantees technical terms, acronyms, and names are correctly recognized and preserved:
+1. **Whisper ASR Conditioning**: High-priority terms are injected into the Whisper prompt to bias acoustic decoding probabilities.
+2. **LLM Translation Guardrails**: System prompts enforce retaining technical industry standards (`pipeline`, `backend`, `deploy`, `commit`) rather than literal translations.
+
+Specify terms via [`glossary.txt`](glossary.txt), the `GLOSSARY_TERMS` environment variable, or the `--glossary` CLI flag.
+
+### 4. Persistence & Export API
+
+Every processed sentence is stored in SQLite (WAL mode) with relative millisecond-precision timestamps (`start_time`, `end_time`).
+
+```bash
+# Export SubRip (.srt)
+curl "http://localhost:8000/api/sessions/{session_id}/export?format=srt" -o subtitles.srt
+
+# Export WebVTT (.vtt)
+curl "http://localhost:8000/api/sessions/{session_id}/export?format=vtt" -o subtitles.vtt
+
+# Export Plain Text (.txt)
+curl "http://localhost:8000/api/sessions/{session_id}/export?format=txt" -o subtitles.txt
+```
+
+---
+
+## Worker CLI Reference
+
+```
+usage: worker.py [-h] [--session-id SESSION_ID] [--source-lang SOURCE_LANG]
+                 [--target-lang TARGET_LANG] [--glossary GLOSSARY]
+                 [--device DEVICE] [--list-devices] [--file FILE]
+                 [--stream-url STREAM_URL] [--is-live]
+
+options:
+  --session-id SESSION_ID    Session / Room identifier (default: default)
+  --source-lang SOURCE_LANG  Source language code (en, es, pt, auto)
+  --target-lang TARGET_LANG  Target language code (es, en, pt)
+  --glossary GLOSSARY        Path to custom glossary file
+  --device DEVICE            Audio input device index
+  --list-devices             List available audio devices and exit
+  --file FILE                Path to WAV file for offline / batch ingestion
+  --stream-url STREAM_URL    Live stream URL (YouTube, Twitch, Kick, RTMP, HLS)
+  --is-live                  Force livestream mode (tune directly to live edge)
+```
+
+---
+
+## Docker Deployment
+
+To run the complete gateway with Valkey in Docker:
+
 ```bash
 docker compose up -d
 ```
-El gateway estará listo en `http://localhost:8000`.
 
-#### Opción B: Inicio Nativo con Túnel Público Cloudflare
+To run with the optional audio capture worker (Linux only, requires host audio device):
 ```bash
-./start.sh
-```
-El script levantará Valkey, FastAPI y un túnel efímero con URL pública `https://*.trycloudflare.com` lista para compartir.
-
-### 3. Iniciar la Captura de Audio (Worker)
-En tu terminal:
-```bash
-# Iniciar con tu micrófono por defecto (EN -> ES):
-./venv/bin/python backend/worker.py
-
-# Transcripción Nativa Directa en Español (ES -> ES, con Bypass de traducción):
-./venv/bin/python backend/worker.py --source-lang es --target-lang es
-
-# Traducir de Inglés a Portugués (EN -> PT):
-./venv/bin/python backend/worker.py --source-lang en --target-lang pt
-
-# Listar dispositivos para elegir tu micrófono:
-./venv/bin/python backend/worker.py --list-devices
-./venv/bin/python backend/worker.py --device 0
-
-# O probar con archivo WAV pregrabado:
-./venv/bin/python backend/worker.py --file sample_jfk.wav
+docker compose --profile with-worker up -d
 ```
 
 ---
 
-## Matriz Multilingüe Dinámica (Sprint 1)
+## Testing & Concurrent Simulation
 
-El sistema admite cualquier combinación entre **Inglés (EN)**, **Español (ES)** y **Portugués (PT)**:
+Simulate multiple parallel stages (e.g. 5 concurrent tracks) to stress-test Valkey routing, SQLite WAL concurrency, and dashboard telemetry:
 
-| Combinación | Modo de Procesamiento | Latencia Promedio | Consumo de Tokens |
-| :--- | :--- | :--- | :--- |
-| **EN &rarr; ES** | Whisper ASR + LLaMA Translation | ~1.0s – 1.1s | Normal (ASR + LLM) |
-| **ES &rarr; ES** | **Bypass Automático** (Transcripción Nativa) | **~400ms – 500ms** | **Cero tokens de LLM** |
-| **ES &rarr; EN** | Whisper ASR + LLaMA Translation | ~1.0s – 1.1s | Normal (ASR + LLM) |
-| **EN &rarr; PT** | Whisper ASR + LLaMA Translation | ~1.0s – 1.1s | Normal (ASR + LLM) |
-| **ES &rarr; PT** | Whisper ASR + LLaMA Translation | ~1.0s – 1.1s | Normal (ASR + LLM) |
-
-> [!TIP]
-> Cuando el idioma de origen y destino son idénticos (ej. `ES -> ES`), el worker **omite por completo la llamada al modelo de chat**, entregando la transcripción de Whisper directamente a los clientes en tiempo récord (~400 ms).
-
----
-
-## Glosario y Sesgo de Dominio (Domain Bias & Glossary)
-
-El sistema integra un mecanismo de **Domain Biasing** de dos etapas que garantiza que nombres propios, siglas complejas, marcas y jerga especializada se transcriban y traduzcan con máxima precisión sin deformaciones fonéticas ni traducciones literales no deseadas.
-
-### ¿Cómo funciona internamente?
-
-1. **Sesgo Fonético en Whisper (ASR Biasing)**:
-   - Whisper recibe los términos del glosario a través de su parámetro `prompt`.
-   - Esto condiciona la matriz de probabilidades del decodificador acústico: si el audio contiene una palabra fonéticamente ambigua o con acento regional marcado, el modelo favorece los términos cargados en el glosario en lugar de confundirlos con palabras genéricas similares.
-   - El worker utiliza un **pool rotativo dinámico**: mantiene los 20 términos más prioritarios fijos en cada fragmento e intercala muestras rotativas del resto para cubrir vocabularios de cientos de palabras sin exceder el límite de tokens de Whisper.
-
-2. **Preservación Semántica en el Traductor (LLM Preservation)**:
-   - El modelo de traducción (LLM) recibe directrices estrictas para preservar la terminología oficial, tecnologías, acrónimos y entidades sin traducirlas literalmente al español (ej. mantener *pipeline, backend, deploy, commit* en su forma estándar de la industria en vez de traducirlos como *tubería* o *desplegar*).
-
-### ¿Cómo personalizar el glosario según tu transmisión?
-
-Puedes adaptar el glosario a cualquier temática simplemente editando el archivo [`glossary.txt`](glossary.txt) o creando archivos separados para cada tipo de evento:
-
-#### Ejemplos de uso por temática:
-
-- **Programación & Cloud (por defecto)**:
-  ```text
-  Kubernetes, Docker, Postgres, AWS, Dijkstra, FastAPI, CI/CD, Pull Request, Commit, Refactor
-  ```
-
-- **Noticias, Política & Actualidad**:
-  ```text
-  DNU, AFIP, ARCA, INDEC, Balotaje, Casa Rosada, Plaza de Mayo, Francos, Milei, Kicillof, Caputo
-  ```
-
-- **Deportes & Fútbol**:
-  ```text
-  Scaloneta, Bombonera, Monumental, VAR, Offside, Hat-trick, Premier League, Libertadores, Conmebol
-  ```
-
-- **Medicina o Finanzas**:
-  ```text
-  Nasdaq, S&P 500, Yield, Fintech, Bullish, Bearish, Cripto, Blockchain, Resonancia, Hemoglobina
-  ```
-
-### Formas de Configuración:
-
-1. **Vía archivo local (`glossary.txt`)**:
-   Añade tus términos separados por comas o por líneas en `glossary.txt`. El worker los cargará automáticamente al arrancar.
-
-2. **Vía variables de entorno (`.env`)**:
-   ```env
-   # Ruta a un archivo alternativo
-   GLOSSARY_FILE=glosarios/noticias.txt
-
-   # O inyección rápida de términos directos separados por comas:
-   GLOSSARY_TERMS=Valkey,Kubernetes,OpenAI,DeepMind
-   ```
-
-3. **Vía línea de comandos (CLI)**:
-   ```bash
-   ./venv/bin/python backend/worker.py --glossary glosarios/deportes.txt --stream-url "https://..."
-   ```
-
----
-
-## Optimización para Quemar Subtítulos en OBS (Burn-in Overlay)
-
-Para incrustar los subtítulos directamente sobre el video saliente de Twitch/YouTube sin degradación de rendimiento:
-
-1. En **OBS Studio**, añade una fuente de tipo **Navegador** (*Browser*).
-2. Configura los parámetros:
-   - **URL:** `http://localhost:8000/?mode=overlay` (o añade el par deseado: `?mode=overlay&pair=es-es`)
-   - **Ancho (*Width*):** `1920` (o el ancho de tu lienzo)
-   - **Alto (*Height*):** `1080` (o el alto de tu lienzo)
-   - **FPS:** `30` o `60` (el renderizado CSS está optimizado por GPU con `will-change` y `contain: layout paint`).
-   - **CSS personalizado:** Vacío.
-   - Marca: **Actualizar el navegador cuando la escena se active**.
-3. **Legibilidad Burn-in:** El overlay aplica tipografía monocromática / monospace con trazo perimetral (`-webkit-text-stroke: 1.2px #000`) y sombra multi-nivel de 360° que garantiza lectura perfecta sobre fondos totalmente blancos, oscuros o con mucho movimiento. Muestra un máximo estricto de 2 a 3 líneas y desvanece las frases anteriores tras 10 segundos de silencio.
-
----
-
-## Persistencia, Exportación y Dashboard Audiovisual (Sprint 2)
-
-El sistema incluye capacidades profesionales para eventos audiovisuales y conferencias multiescenario:
-
-### 1. Exportación Completa de Transcripciones (SRT, VTT, TXT)
-Cada frase procesada almacena sus marcas de tiempo relativas precisas (`start_time` y `end_time` en segundos con milisegundos) en una base de datos local SQLite configurada en modo WAL (`database.py`):
-
-- **SubRip (.srt):** Formateado con bloques estándar `00:00:01,250 --> 00:00:04,500` bilingüe o idioma único.
-- **WebVTT (.vtt):** Cabecera `WEBVTT` para reproductores HTML5 y plataformas de video.
-- **Texto Plano (.txt):** Con marcas de tiempo simples `[00:00:01] Frase`.
-
-#### Endpoints REST de Exportación:
 ```bash
-# Descargar subtítulos en formato SRT (bilingüe por defecto):
-curl "http://localhost:8000/api/sessions/main/export?format=srt" -o subtitles_main.srt
-
-# Descargar en formato WebVTT sólo el idioma traducido:
-curl "http://localhost:8000/api/sessions/stage-1/export?format=vtt&bilingual=false" -o stage1.vtt
-
-# Descargar en texto plano para actas o resúmenes:
-curl "http://localhost:8000/api/sessions/main/export?format=txt" -o session.txt
-
-# Cerrar formalmente una sesión:
-curl -X POST "http://localhost:8000/api/sessions/stage-1/close"
+./venv/bin/python scripts/simulate_sessions.py --rooms stage-1 stage-2 stage-3 stage-4 stage-5 --chunks 10 --delay 2.5
 ```
 
 ---
 
-### 2. Arquitectura Multisesión Concurrente (Salas en Paralelo)
-El sistema soporta transmisiones simultáneas en múltiples salas (ej. `stage-1`, `track-ai`, `main`):
-- **Canales Valkey Aislados:** Cada sala publica en `subtitles:{session_id}:live` y guarda su historial en `subtitles:{session_id}:history`.
-- **WebSockets Segmentados:** Los clientes conectados a `/ws/stage-1` o `/?session=stage-1` reciben exclusivamente los subtítulos de esa sala.
-- **Rotación Multi-API Key de Groq:** Puedes especificar múltiples claves en `.env` (`GROQ_API_KEYS=key1,key2,key3`). El sistema rota automáticamente entre ellas y aplica un cooldown de 60 segundos si alguna alcanza el rate limit (HTTP 429).
-- **Iniciar un worker en una sala específica:**
-  ```bash
-  ./venv/bin/python backend/worker.py --session-id stage-1 --source-lang en --target-lang es
-  ```
-- **Simular 5 salas concurrentes para pruebas de carga:**
-  ```bash
-  ./venv/bin/python scripts/simulate_sessions.py --rooms stage-1 stage-2 stage-3 stage-4 stage-5 --chunks 5
-  ```
+## License
 
----
-
-### 3. Dashboard de Control Room en Vivo (`/dashboard`)
-Panel de monitoreo para operadores audiovisuales accesible en `http://localhost:8000/dashboard`:
-- **Telemetría en tiempo real por SSE:** Actualizaciones continuas vía Server-Sent Events (`/api/telemetry/stream`) sin frameworks pesados.
-- **Tarjetas por Sala:** Estado en vivo (`En Vivo`, `Silencio`, `Inactivo`), espectadores conectados, desglose de latencia (ASR ms, Traducción ms, Total ms) y Groq RPM.
-- **Alerta de Silencio Audiovisual:** Si una sala en vivo no detecta voz durante más de **15 segundos**, la tarjeta avisa al operador técnico de una posible caída de audio o micrófono muteado.
-- **Acciones Rápidas:** Descarga de SRT/VTT con 1 clic, copia instantánea de la URL para OBS (`/overlay?session=...`) y botón de finalización de sesión.
-
----
-
-## Estrategia de Audio: Nativo o Docker
-
-| Modo | Compatibilidad | Recomendación |
-| :--- | :--- | :--- |
-| **Worker Nativo (`backend/worker.py`)** | **Universal:** Linux, macOS, Windows | **Recomendado:** Accede directamente a la tarjeta de sonido y micrófonos USB/Bluetooth sin latencia adicional ni permisos complejos. |
-| **Worker en Docker (`--profile with-worker`)** | **Linux únicamente** | Adecuado para servidores headless o máquinas Linux dedicadas pasando `--device /dev/snd:/dev/snd`. |
-
----
-
-## Análisis de Costos y Viabilidad
-
-| Nivel | Costo Estimado | Descripción |
-| :--- | :--- | :--- |
-| **Tier Gratuito (Groq Cloud)** | **$0.00 USD** | Silero VAD filtra silencios manteniendo el flujo en ~10-15 RPM. Entra 100% dentro de la cuota gratuita de Groq. |
-| **Producción Pay-as-you-go** | **~$0.11 USD / hora** | Precios de Groq Cloud: Whisper Large v3 ($0.111 / hora de audio) + Llama 3.1 8B ($0.05 / 1M tokens). **80 horas de streaming continuo cuestan menos de $10 USD.** |
-
----
-
-## Publicación y Release Open Source
-
-Para etiquetar y publicar el release `v1.0.0` en Git:
-
-```bash
-git add .
-git commit -m "feat: initial open source release v1.0.0"
-git tag -a v1.0.0 -m "Release v1.0.0: Live Subtitles & Translation System"
-git push origin main --tags
-```
-
----
-
-## Licencia
-
-Este proyecto está distribuido bajo la licencia **MIT**. Consulta el archivo [`LICENSE`](LICENSE) para más detalles.
+MIT. See [LICENSE](LICENSE) for details.

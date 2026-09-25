@@ -49,7 +49,6 @@ silero_vad.onnx
 *.flac
 *.ogg
 sample_*.wav
-!sample_jfk.wav
 
 # Process IDs & Run Logs
 *.pid
