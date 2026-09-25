@@ -2364,6 +2364,7 @@
       let latencyHistory = []; // { timeLabel, showLabel, tot, asr, trans, breakdown: [] }
       let lastLatencyTickTime = 0;
       let latencyGraceUntil = Date.now() + 15000; // Chequeo inicial de 15 segundos al abrir el dashboard
+      let lastValidMetricsBySession = {};
 
       function initAnalyticsCharts() {
         if (typeof Chart === 'undefined') return;
@@ -2389,8 +2390,8 @@
                   borderWidth: 2,
                   fill: false,
                   tension: 0.35,
-                  pointRadius: 2.5,
-                  pointHoverRadius: 5,
+                  pointRadius: 0,
+                  pointHoverRadius: 4,
                   pointBackgroundColor: '#00f0ff',
                   pointBorderColor: '#00f0ff',
                   pointBorderWidth: 1
@@ -2403,8 +2404,8 @@
                   borderWidth: 1.8,
                   fill: false,
                   tension: 0.35,
-                  pointRadius: 2.5,
-                  pointHoverRadius: 5,
+                  pointRadius: 0,
+                  pointHoverRadius: 4,
                   pointBackgroundColor: '#ff9500',
                   pointBorderColor: '#ff9500',
                   pointBorderWidth: 1
@@ -2417,8 +2418,8 @@
                   borderWidth: 1.8,
                   fill: false,
                   tension: 0.35,
-                  pointRadius: 2.5,
-                  pointHoverRadius: 5,
+                  pointRadius: 0,
+                  pointHoverRadius: 4,
                   pointBackgroundColor: '#f43f5e',
                   pointBorderColor: '#f43f5e',
                   pointBorderWidth: 1
@@ -2781,17 +2782,25 @@
           };
 
           function getSessionMetrics(s) {
-            const isClosed = (s.status === 'closed');
-            const isSilent = (s.status === 'silent');
-            const isStale = (Date.now() / 1000 - (s.last_activity || 0)) > 15;
-            if (isClosed || isSilent || isStale) {
+            const sid = (s.session_id || '').toLowerCase().trim();
+            if (s.status === 'closed') {
+              delete lastValidMetricsBySession[sid];
               return { tot: 0, asr: 0, trans: 0 };
             }
-            return {
-              tot: Math.round(s.metrics?.latency_ms || 0),
-              asr: Math.round(s.metrics?.asr_ms || 0),
-              trans: Math.round(s.metrics?.trans_ms || 0)
-            };
+
+            let tot = Math.round(s.metrics?.latency_ms || 0);
+            let asr = Math.round(s.metrics?.asr_ms || 0);
+            let trans = Math.round(s.metrics?.trans_ms || 0);
+
+            if (tot > 0) {
+              lastValidMetricsBySession[sid] = { tot, asr, trans };
+            } else if (lastValidMetricsBySession[sid]) {
+              tot = lastValidMetricsBySession[sid].tot;
+              asr = lastValidMetricsBySession[sid].asr;
+              trans = lastValidMetricsBySession[sid].trans;
+            }
+
+            return { tot, asr, trans };
           }
 
           const activeFiltered = filtered.filter(s => s.status !== 'closed');

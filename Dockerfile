@@ -27,8 +27,11 @@ RUN groupadd -g 1000 appgroup && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar código fuente y archivos estáticos
-COPY server.py worker.py ./
+# Copiar código fuente, módulos, modelos y archivos estáticos
+COPY backend/ ./backend/
+COPY models/ ./models/
+COPY scripts/ ./scripts/
+COPY server.py worker.py database.py exporters.py ./
 COPY static/ ./static/
 
 # Asegurar permisos correctos
