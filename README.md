@@ -170,6 +170,11 @@ curl "http://localhost:8000/api/sessions/{session_id}/export?format=vtt" -o subt
 curl "http://localhost:8000/api/sessions/{session_id}/export?format=txt" -o subtitles.txt
 ```
 
+### 5. API Key Management & Rate Limit Balancing
+
+- **Single Key (`GROQ_API_KEY`)**: Standard mode. When using Groq Cloud's paid Pay-as-you-go tier, rate limits are high (thousands of RPM/TPM), making a single key sufficient for continuous 24/7 multi-room broadcasting without requiring rotation.
+- **Key Rotation (`GROQ_API_KEYS`)**: Multiple comma-separated keys (`GROQ_API_KEYS=key1,key2,key3`). Primarily designed for the **Free Tier**. If any key encounters HTTP 429 (Rate Limit Exceeded), the worker automatically assigns a 2.5-second cooldown and immediately switches to the next available key in round-robin, preventing live subtitle stalls.
+
 ---
 
 ## Worker CLI Reference
@@ -216,6 +221,22 @@ Simulate multiple parallel stages (e.g. 5 concurrent tracks) to stress-test Valk
 ```bash
 ./venv/bin/python scripts/simulate_sessions.py --rooms stage-1 stage-2 stage-3 stage-4 stage-5 --chunks 10 --delay 2.5
 ```
+
+---
+
+## Production Architecture & High-Traffic Scaling
+
+### Traffic & Resource Footprint
+
+- **Decoupled 1-to-N Pipeline**: Ingestion inference (ASR + LLM) occurs exactly once per audio chunk (~4s) regardless of viewer count. 1 viewer or 50,000 viewers incur the identical AI inference overhead.
+- **Bandwidth Profile**: Subtitle JSON payloads average ~250 bytes per 4 seconds (~60 B/s per client, or ~0.5 kbps). 1,000 concurrent viewers consume less than 0.6 Mbps of outbound network traffic.
+
+### Deployment Recommendations
+
+| Target Concurrency | Recommended Infrastructure | Configuration |
+| :--- | :--- | :--- |
+| **Up to 5,000 – 10,000 Viewers** | **Single Linux VM** (4 vCPUs, 8 GB RAM, e.g. Azure D4as_v5, AWS c6i.xlarge, or Hetzner CX31) | Run Valkey via Docker, tune OS open file descriptors (`ulimit -n 65535`), and run Uvicorn directly with standard WebSocket loop. Viable and cost-effective (< $40/mo). |
+| **10,000 to 100,000+ Viewers** | **Distributed Container Cluster** (Kubernetes AKS/EKS, AWS ECS, or Docker Swarm) | **Ingestion**: 1 worker per active stream channel.<br>**Broker**: Managed Valkey/Redis instance (e.g., Azure Cache for Redis, AWS ElastiCache).<br>**WebSockets**: Horizontally scale stateless `backend.server:app` replicas behind a Layer 7 Load Balancer (Nginx / AWS ALB / Traefik) handling TLS termination. |
 
 ---
 
