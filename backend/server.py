@@ -720,7 +720,7 @@ async def lifespan(app: FastAPI):
                     stream_url=s["stream_url"],
                     source_lang=s.get("source_lang") or "auto",
                     target_lang=s.get("target_lang") or "es",
-                    is_live=True
+                    is_live=False
                 )
     except Exception as e:
         logger.warning(f"Aviso al auto-iniciar workers en arranque: {e}")

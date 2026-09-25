@@ -1077,12 +1077,16 @@ class AudioWorker:
                                     info = info['entries'][0]
                                 target_url = info.get('url') or stream_url
                                 is_currently_live = bool(info.get('is_live')) or (info.get('live_status') == 'is_live')
-                                if is_currently_live or force_live:
+                                duration = info.get('duration')
+                                if is_currently_live:
+                                    is_live = True
+                                elif duration and duration > 0:
+                                    is_live = False
+                                elif force_live:
                                     is_live = True
                                 self.is_live = is_live
                                 user_agent = info.get('http_headers', {}).get('User-Agent')
                                 title = info.get('title')
-                                duration = info.get('duration')
                                 dur_str = f" ({duration}s)" if duration else ""
                                 logger.info(f"Fuente resuelta: '{title or stream_url}' (En vivo: {is_live}{dur_str})")
                     except Exception as e:
@@ -1102,9 +1106,10 @@ class AudioWorker:
 
                     cmd.extend([
                         "-fflags", "+nobuffer+flush_packets",
-                        "-flags", "low_delay",
-                        "-live_start_index", "-1"
+                        "-flags", "low_delay"
                     ])
+                    if ".m3u8" in target_url.lower():
+                        cmd.extend(["-live_start_index", "-1"])
                 else:
                     # VIDEO GRABADO / VOD: Continuar exactamente en el segundo donde fue pausado
                     if self.start_offset_s > 0:
