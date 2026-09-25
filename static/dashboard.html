@@ -1750,6 +1750,42 @@
     </div>
   </div>
 
+  <!-- Modal Interactivo: Enlace OBS Studio -->
+  <div id="modal-obs" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="lbl-obs-modal-title">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="lbl-obs-modal-title" class="modal-title">Enlace para OBS Studio</h3>
+        <button type="button" id="btn-obs-modal-close" class="modal-close-btn" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="modal-form">
+        <div class="modal-field">
+          <label id="lbl-obs-modal-lang" for="select-obs-modal-lang" class="modal-label">Subtítulos</label>
+          <select id="select-obs-modal-lang" class="modal-input">
+            <option value="es" selected>Español (ES)</option>
+            <option value="en">English (EN)</option>
+            <option value="pt">Português (PT)</option>
+          </select>
+          <span class="modal-help" id="lbl-obs-modal-lang-help">Selecciona el idioma de los subtítulos que deseas proyectar en OBS.</span>
+        </div>
+        <div class="modal-field">
+          <label id="lbl-obs-modal-url" for="input-obs-modal-url" class="modal-label">URL Browser Source (Modo Overlay)</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <input type="text" id="input-obs-modal-url" class="modal-input" readonly spellcheck="false" style="cursor: text; font-family: ui-monospace, monospace; font-size: 11px; background: #000; flex: 1;" />
+            <button type="button" id="btn-obs-modal-copy" class="btn btn-highlight" style="white-space: nowrap; padding: 7px 14px; font-size: 12px;">
+              Copiar
+            </button>
+          </div>
+        </div>
+        <div class="modal-actions" style="margin-top: 14px;">
+          <button type="button" id="btn-obs-modal-cancel" class="btn">Cerrar</button>
+          <a id="btn-obs-modal-preview" href="#" target="_blank" class="btn" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
+            Probar en pestaña
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast -->
   <div id="toast" class="toast hidden"></div>
 
@@ -1841,6 +1877,13 @@
           toastSessionResumed: 'Sesión "{id}" reactivada con éxito.',
           toastSessionDeleted: 'Sesión "{id}" eliminada con éxito.',
           toastObsCopied: 'Enlace OBS copiado para sala {id}',
+          obsModalTitle: 'Enlace para OBS Studio',
+          obsModalLangLabel: 'Subtítulos',
+          obsModalLangHelp: 'Selecciona el idioma de los subtítulos que deseas proyectar en OBS.',
+          obsModalUrlLabel: 'URL Browser Source (Modo Overlay)',
+          obsModalCopyBtn: 'Copiar',
+          obsModalPreviewBtn: 'Probar en pestaña',
+          obsModalClose: 'Cerrar',
           // Tooltips estilo Power BI
           tooltipLatency: 'Tiempo total de procesamiento de extremo a extremo: captura, transcripción de voz, traducción y difusión WebSockets.',
           tooltipAsr: 'Tiempo que tarda el modelo Whisper en la infraestructura Groq en transcribir el fragmento de audio a texto.',
@@ -1954,6 +1997,13 @@
           toastSessionResumed: 'Session "{id}" resumed successfully.',
           toastSessionDeleted: 'Session "{id}" deleted successfully.',
           toastObsCopied: 'OBS link copied for room {id}',
+          obsModalTitle: 'OBS Studio Link',
+          obsModalLangLabel: 'Subtitles',
+          obsModalLangHelp: 'Select the subtitle language you want to show in OBS.',
+          obsModalUrlLabel: 'Browser Source URL (Overlay Mode)',
+          obsModalCopyBtn: 'Copy',
+          obsModalPreviewBtn: 'Test in tab',
+          obsModalClose: 'Close',
           // Tooltips
           tooltipLatency: 'Total end-to-end processing latency: audio capture, speech transcription, translation, and WebSocket delivery.',
           tooltipAsr: 'Inference time taken by the Whisper model on Groq hardware to convert audio into text.',
@@ -2064,6 +2114,13 @@
           toastSessionClosed: 'Sessão "{id}" marcada como Inativa.',
           toastSessionDeleted: 'Sessão "{id}" excluída com sucesso.',
           toastObsCopied: 'Link OBS copiado para a sala {id}',
+          obsModalTitle: 'Link para OBS Studio',
+          obsModalLangLabel: 'Legendas',
+          obsModalLangHelp: 'Selecione o idioma das legendas que deseja exibir no OBS.',
+          obsModalUrlLabel: 'URL Browser Source (Modo Overlay)',
+          obsModalCopyBtn: 'Copiar',
+          obsModalPreviewBtn: 'Testar na aba',
+          obsModalClose: 'Fechar',
           // Tooltips
           tooltipLatency: 'Tempo total de processamento de ponta a ponta: captura, transcrição de voz, tradução e distribuição WebSockets.',
           tooltipAsr: 'Tempo de inferência do modelo Whisper no hardware Groq para converter áudio em texto.',
@@ -2185,7 +2242,19 @@
         editErrorMsg: document.getElementById('edit-error-msg'),
         btnEditClose: document.getElementById('btn-edit-close'),
         btnEditCancel: document.getElementById('btn-edit-cancel'),
-        btnEditSubmit: document.getElementById('btn-edit-submit')
+        btnEditSubmit: document.getElementById('btn-edit-submit'),
+        // OBS Modal
+        modalObs: document.getElementById('modal-obs'),
+        lblObsModalTitle: document.getElementById('lbl-obs-modal-title'),
+        btnObsModalClose: document.getElementById('btn-obs-modal-close'),
+        btnObsModalCancel: document.getElementById('btn-obs-modal-cancel'),
+        lblObsModalLang: document.getElementById('lbl-obs-modal-lang'),
+        selectObsModalLang: document.getElementById('select-obs-modal-lang'),
+        lblObsModalLangHelp: document.getElementById('lbl-obs-modal-lang-help'),
+        lblObsModalUrl: document.getElementById('lbl-obs-modal-url'),
+        inputObsModalUrl: document.getElementById('input-obs-modal-url'),
+        btnObsModalCopy: document.getElementById('btn-obs-modal-copy'),
+        btnObsModalPreview: document.getElementById('btn-obs-modal-preview')
       };
 
       let eventSource = null;
@@ -2301,6 +2370,15 @@
         const lblEditSourceLang = document.getElementById('lbl-edit-source-lang');
         if (lblEditSourceLang && t.lblEditSourceLang) lblEditSourceLang.textContent = t.lblEditSourceLang;
         if (elements.btnEditSubmit && t.btnEditSave) elements.btnEditSubmit.textContent = t.btnEditSave;
+
+        // OBS modal labels
+        if (elements.lblObsModalTitle && t.obsModalTitle) elements.lblObsModalTitle.textContent = t.obsModalTitle;
+        if (elements.lblObsModalLang && t.obsModalLangLabel) elements.lblObsModalLang.textContent = t.obsModalLangLabel;
+        if (elements.lblObsModalLangHelp && t.obsModalLangHelp) elements.lblObsModalLangHelp.textContent = t.obsModalLangHelp;
+        if (elements.lblObsModalUrl && t.obsModalUrlLabel) elements.lblObsModalUrl.textContent = t.obsModalUrlLabel;
+        if (elements.btnObsModalCopy && t.obsModalCopyBtn) elements.btnObsModalCopy.textContent = t.obsModalCopyBtn;
+        if (elements.btnObsModalPreview && t.obsModalPreviewBtn) elements.btnObsModalPreview.textContent = t.obsModalPreviewBtn;
+        if (elements.btnObsModalCancel && t.obsModalClose) elements.btnObsModalCancel.textContent = t.obsModalClose;
 
         // Analytics labels
         if (elements.lblChartLatencyTitle) elements.lblChartLatencyTitle.textContent = t.chartLatencyTitle;
@@ -3406,8 +3484,8 @@
             </div>
 
             <div class="btn-group btn-group-actions">
-              <!-- Boton OBS Link con icono de enlace / URL (solo icono) -->
-              <button class="btn btn-sm btn-action-icon" onclick="copyText('${overlayUrl}', '${toastCopyMsg}')" title="${t.btnObsTitle || 'Copiar OBS Link'}" aria-label="${t.btnObsTitle || 'Copiar OBS Link'}">
+              <!-- Boton OBS Link con icono de enlace / URL (abre modal con seleccion de idioma) -->
+              <button class="btn btn-sm btn-action-icon" onclick="openObsModal('${safeSessionId}', '${session.target_lang || 'es'}')" title="${t.btnObsTitle || 'Enlace OBS Studio'}" aria-label="${t.btnObsTitle || 'Enlace OBS Studio'}">
                 <svg class="icon-link" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
                   <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
@@ -4026,6 +4104,45 @@
         }
       }
 
+      // -----------------------------------------------------------------------
+      // Modal: Enlace OBS Studio
+      // -----------------------------------------------------------------------
+      let activeObsSessionId = '';
+
+      function updateObsModalUrl() {
+        if (!activeObsSessionId) return;
+        const origin = window.location.origin;
+        const lang = elements.selectObsModalLang ? elements.selectObsModalLang.value : 'es';
+        const url = `${origin}/overlay?session=${encodeURIComponent(activeObsSessionId)}&mode=overlay&lang=${encodeURIComponent(lang)}`;
+        if (elements.inputObsModalUrl) elements.inputObsModalUrl.value = url;
+        if (elements.btnObsModalPreview) elements.btnObsModalPreview.href = url;
+      }
+
+      window.openObsModal = function (sessionId, targetLang) {
+        activeObsSessionId = (sessionId || '').toLowerCase().trim();
+        if (elements.selectObsModalLang) {
+          elements.selectObsModalLang.value = targetLang || 'es';
+        }
+        updateObsModalUrl();
+        if (elements.modalObs) {
+          elements.modalObs.classList.remove('hidden');
+        }
+        if (elements.inputObsModalUrl) {
+          setTimeout(() => {
+            elements.inputObsModalUrl.focus();
+            elements.inputObsModalUrl.select();
+          }, 60);
+        }
+      };
+
+      function closeObsModal() {
+        if (elements.modalObs) {
+          elements.modalObs.classList.add('hidden');
+        }
+        activeObsSessionId = '';
+      }
+      window.closeObsModal = closeObsModal;
+
       // Event Listeners
       if (elements.formGate) {
         elements.formGate.addEventListener('submit', handleGateSubmit);
@@ -4087,6 +4204,35 @@
         });
       }
 
+      // OBS Modal events
+      if (elements.selectObsModalLang) {
+        elements.selectObsModalLang.addEventListener('change', updateObsModalUrl);
+      }
+      if (elements.btnObsModalClose) {
+        elements.btnObsModalClose.addEventListener('click', closeObsModal);
+      }
+      if (elements.btnObsModalCancel) {
+        elements.btnObsModalCancel.addEventListener('click', closeObsModal);
+      }
+      if (elements.btnObsModalCopy) {
+        elements.btnObsModalCopy.addEventListener('click', function () {
+          if (!elements.inputObsModalUrl) return;
+          const url = elements.inputObsModalUrl.value;
+          const t = I18N[currentSiteLang] || I18N.es;
+          const toastMsg = (t.toastObsCopied || 'Enlace OBS copiado para sala {id}').replace('{id}', activeObsSessionId);
+          copyText(url, toastMsg);
+          elements.btnObsModalCopy.textContent = '✓ ' + (t.obsModalCopyBtn || 'Copiado');
+          setTimeout(() => {
+            if (elements.btnObsModalCopy) elements.btnObsModalCopy.textContent = t.obsModalCopyBtn || 'Copiar';
+          }, 2000);
+        });
+      }
+      if (elements.modalObs) {
+        elements.modalObs.addEventListener('click', (e) => {
+          if (e.target === elements.modalObs) closeObsModal();
+        });
+      }
+
       // Tecla Escape para cerrar modales
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -4095,6 +4241,9 @@
           }
           if (elements.modalEditSession && !elements.modalEditSession.classList.contains('hidden')) {
             closeEditSessionModal();
+          }
+          if (elements.modalObs && !elements.modalObs.classList.contains('hidden')) {
+            closeObsModal();
           }
         }
       });

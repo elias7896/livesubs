@@ -694,8 +694,12 @@ NO_CACHE_HEADERS = {
 
 
 @app.get("/", response_class=FileResponse)
-async def serve_reader_page():
-    """Modo Lector Web (admite ?session=stage-1)."""
+async def serve_reader_page(mode: Optional[str] = None):
+    """Modo Lector Web (admite ?session=stage-1, o ?mode=overlay para OBS)."""
+    if mode == "overlay":
+        overlay_file = os.path.join(STATIC_DIR, "overlay.html")
+        if os.path.exists(overlay_file):
+            return FileResponse(overlay_file, headers=NO_CACHE_HEADERS)
     return FileResponse(os.path.join(STATIC_DIR, "index.html"), headers=NO_CACHE_HEADERS)
 
 
@@ -707,7 +711,10 @@ async def serve_fullscreen_page():
 
 @app.get("/overlay", response_class=FileResponse)
 async def serve_overlay_page():
-    """Modo Overlay para OBS Studio (admite ?mode=overlay&session=stage-1)."""
+    """Modo Overlay dedicado para OBS Studio."""
+    overlay_file = os.path.join(STATIC_DIR, "overlay.html")
+    if os.path.exists(overlay_file):
+        return FileResponse(overlay_file, headers=NO_CACHE_HEADERS)
     return FileResponse(os.path.join(STATIC_DIR, "index.html"), headers=NO_CACHE_HEADERS)
 
 

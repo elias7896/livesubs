@@ -253,8 +253,8 @@
   // -------------------------------------------------------------------------
   const urlParams = new URLSearchParams(window.location.search);
   const path = window.location.pathname;
-  let isFullscreenMode = path.startsWith('/fullscreen') || path.startsWith('/overlay') || urlParams.get('mode') === 'fullscreen' || urlParams.get('mode') === 'overlay';
-  let isOverlayMode = isFullscreenMode;
+  let isFullscreenMode = path.startsWith('/fullscreen') || urlParams.get('mode') === 'fullscreen';
+  let isOverlayMode = path.startsWith('/overlay') || urlParams.get('mode') === 'overlay';
   let isObsTransparent = urlParams.get('transparent') === 'true' || urlParams.get('obs') === 'true';
   if (isObsTransparent && elements.body) {
     elements.body.classList.add('obs-transparent');
